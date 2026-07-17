@@ -1,3 +1,36 @@
+// ==========================================
+// FIREBASE CONFIG
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDoNCW8rPLtp6LlKv01sjYGbMzuEFIutlI",
+  authDomain: "ils-russia-portal.firebaseapp.com",
+  databaseURL: "https://ils-russia-portal-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "ils-russia-portal",
+  storageBucket: "ils-russia-portal.appspot.com",
+  messagingSenderId: "483861555600",
+  appId: "1:483861555600:web:d5736a188cd5486bf26b15"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+async function saveEmployeesToDatabase() {
+  await db.ref("employees").set(employees);
+}
+
+async function loadEmployeesFromDatabase() {
+  const snapshot = await db.ref("employees").once("value");
+  if (snapshot.exists()) {
+    employees = snapshot.val();
+  } else {
+    await saveEmployeesToDatabase();
+  }
+}
+
+// ==========================================
+// بقیه کد اصلی تو...
+// ==========================================
 let currentUser = null;
 // ==========================================
 // AUTHENTICATION & OTP
@@ -143,39 +176,38 @@ function startSplashAnimation(resolve) {
     setTimeout(typeMessage, 300);
 }
 
-// جایگزین خودکار برای alert های قبلی – اگر خواستی می‌تونی همه alert ها رو با showCustomAlert جایگزین کنی
+// جایگزین خودکار برای alert های قبلی
 window.alert = function(msg) {
   showCustomAlert(msg);
 };
 
 // ========== LOGIN ==========
 function handleLogin() {
+  if (!navigator.onLine) {
+    showCustomAlert('⚠️ No internet connection', 'CONNECTION ERROR');
+    return;
+  }
+  
   const id = document.getElementById('loginId').value.trim();
   const pass = document.getElementById('loginPassword').value.trim();
   const error = document.getElementById('loginError');
 
-  // چک ادمین
-  if (id === 'admin' && pass === 'admin123') {
-    currentMode = 'admin';
-    window.isAdmin = true;
-    document.getElementById('loginOverlay').style.display = 'none';
-    showOTPOverlay();
-    return;
-  }
-
-  // چک کارمند: حالا حتماً password چک می‌شه
-  const emp = employees.find(e => e.id === id && e.password === pass);
-  if (emp) {
-    currentMode = 'employee';
-    window.isAdmin = false;
-    currentUser = { type: 'employee', emp: emp };
-    document.getElementById('loginOverlay').style.display = 'none';
-    showOTPOverlay();
-    return;
-  }
-
-  // خطا
-  error.style.display = 'block';
+  auth.signInWithEmailAndPassword(id + "@ils.com", pass)
+    .then(() => {
+      if (id === 'admin') {
+        currentMode = 'admin';
+        window.isAdmin = true;
+      } else {
+        currentMode = 'employee';
+        window.isAdmin = false;
+        currentUser = { type: 'employee', emp: employees.find(e => e.id === id) };
+      }
+      document.getElementById('loginOverlay').style.display = 'none';
+      showOTPOverlay();
+    })
+    .catch(() => {
+      error.style.display = 'block';
+    });
 }
 
 // ========== OTP ==========
@@ -193,7 +225,6 @@ function showOTPOverlay() {
 function generateOTP() {
   currentOTP = String(Math.floor(100000 + Math.random() * 900000));
   
-  // نمایش نوتیفیکیشن از بالا مثل پیام گوشی
   const notif = document.getElementById('otpNotification');
   const notifCode = document.getElementById('otpNotificationCode');
   notifCode.textContent = currentOTP;
@@ -203,7 +234,6 @@ function generateOTP() {
     notif.classList.add('show');
   }, 100);
   
-  // بعد از ۵ ثانیه بره بالا
   setTimeout(() => {
     notif.classList.remove('show');
     setTimeout(() => {
@@ -213,6 +243,11 @@ function generateOTP() {
 }
 
 function verifyOTP() {
+  if (!navigator.onLine) {
+    showCustomAlert('⚠️ No internet connection', 'CONNECTION ERROR');
+    return;
+  }
+  
   let entered = '';
   for (let i = 1; i <= 6; i++) {
     entered += document.getElementById('otp' + i).value;
@@ -223,16 +258,12 @@ function verifyOTP() {
     document.getElementById('otpNotification').style.display = 'none';
     clearInterval(otpTimerInterval);
     
-    // ۱. لودینگ ۷ ثانیه
     showLoadingOverlay();
     
     setTimeout(() => {
       hideLoadingOverlay();
-      
-      // ۲. نمایش صفحه خوش‌آمدگویی INTERNATIONAL LINE SYSTEM
       showWelcomeOverlay();
       
-      // ۳. بعد از ۳ ثانیه بره به پنل
       setTimeout(() => {
         hideWelcomeOverlay();
         
@@ -254,18 +285,16 @@ function verifyOTP() {
     document.getElementById('otpError').style.display = 'block';
   }
 }
-
-
 function otpAutoFocus(input) {
   if (input.value.length === 1 && input.nextElementSibling) {
     input.nextElementSibling.focus();
   }
 }
 
-// ========== LOADING OVERLAY ==========
 function hideLoadingOverlay() {
   document.getElementById('loadingOverlay').style.display = 'none';
 }
+
 function startOTPTimer() {
   otpSecondsLeft = 30;
   document.getElementById('resendBtn').disabled = true;
@@ -291,7 +320,34 @@ function resendOTP() {
   document.getElementById('otp1').focus();
   document.getElementById('otpError').style.display = 'none';
 }
-// ========== WELCOME OVERLAY ==========
+function otpPaste(e) {
+  e.preventDefault();
+  const paste = (e.clipboardData || window.clipboardData).getData('text');
+  const digits = paste.replace(/\D/g, '').slice(0, 6);
+  
+  for (let i = 0; i < 6; i++) {
+    const input = document.getElementById('otp' + (i + 1));
+    if (input) {
+      input.value = digits[i] || '';
+    }
+  }
+  
+  const lastFilled = digits.length;
+  if (lastFilled < 6) {
+    document.getElementById('otp' + (lastFilled + 1))?.focus();
+  } else {
+    document.getElementById('otp6')?.focus();
+  }
+}
+
+function otpKeyDown(e, input) {
+  if (e.key === 'Backspace' && input.value === '') {
+    if (input.previousElementSibling) {
+      input.previousElementSibling.focus();
+    }
+  }
+}
+
 function showWelcomeOverlay() {
   const el = document.getElementById('welcomeOverlay');
   el.style.display = 'flex';
@@ -323,7 +379,7 @@ let employees = [
     ccv2: "123",
     zip: "1234567890",
     phone: "09121234567",
-    loan: "",
+    Line: "",
     birthDate: "1990/05/15",
     documents: {
       lineEnabled: true,
@@ -353,7 +409,7 @@ let employees = [
     ccv2: "456",
     zip: "9876543210",
     phone: "09129876543",
-    loan: "",
+    Line: "",
     birthDate: "1988/08/20",
     documents: {
       lineEnabled: false,
@@ -398,7 +454,7 @@ function adminInput(icon, label, name, currentValue) {
 }
 
 // ========== Actions ==========
-function saveEmployee(empId) {
+async function saveEmployee(empId) {
   const card = document.getElementById(`admin-card-${empId}`);
   if (!card) return;
   const inputs = card.querySelectorAll('input');
@@ -411,38 +467,53 @@ function saveEmployee(empId) {
     if (key === 'salary' || key === 'balance') {
       value = parseFloat(value) || 0;
     }
-    // اطمینان از ذخیرهٔ password حتی اگر خالی باشد (نگه داشتن قبلی)
     if (key === 'password' && value.trim() === '') {
-      return; // اگر خالی بود، تغییر نده
+      return;
     }
     emp[key] = value;
   });
 
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   showCustomAlert('✅ Information saved successfully');
 }
 
-function deleteEmployee(empId) {
+async function deleteEmployee(empId) {
   if (!confirm('Are you sure you want to delete this employee?')) return;
   employees = employees.filter(e => e.id != empId);
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   renderAllCards();
 }
 
-function toggleLine(empId) {
+async function toggleLine(empId) {
   const emp = employees.find(e => e.id == empId);
   if (!emp) return;
   if (!emp.documents) emp.documents = {};
   emp.documents.lineEnabled = !emp.documents.lineEnabled;
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   renderAllCards();
 }
 
-function addEmployee() {
+async function addEmployee() {
   const newId = Date.now().toString();
+  const defaultPassword = "123456";
+  const email = newId + "@ils.com";
+
+  try {
+    // 🎯 این خط معجزه می‌کنه - کاربر Auth رو اتوماتیک می‌سازه
+    await auth.createUserWithEmailAndPassword(email, defaultPassword);
+    console.log("✅ Auth user created: " + email);
+  } catch(e) {
+    if (e.code === 'auth/email-already-in-use') {
+      alert("⚠️ User already exists!");
+      return;
+    }
+    console.error(e);
+  }
+
   const newEmp = {
     id: newId,
-    password: "123456",
+    password: defaultPassword,
+    email: email,
     passport: "",
     name: "",
     salary: 0,
@@ -454,7 +525,7 @@ function addEmployee() {
     ccv2: "",
     zip: "",
     phone: "",
-    loan: "",
+    Line: "",
     birthDate: "",
     documents: {
       lineEnabled: false,
@@ -470,9 +541,11 @@ function addEmployee() {
       stopSignalBar: false
     }
   };
+
   employees.push(newEmp);
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   renderAllCards();
+  alert("✅ Employee " + newId + " added!\nEmail: " + email);
 }
 
 // ========== LINE Page (Overlay) ==========
@@ -494,12 +567,11 @@ function openLinePage(empId) {
 
   const fullName = emp.name || 'Unknown';
   const birthDate = emp.birthDate || '0000/00/00';
-  const lineCode = emp.documents.lineCode || '';               // جای خط‌چین خالی
+  const lineCode = emp.documents.lineCode || '';
   const phone = emp.phone || 'Not Verified';
-  const cardNumber = emp.cardNumber || '';                    // جای خط‌چین خالی
+  const cardNumber = emp.cardNumber || '';
   const balance = emp.balance || 0;
 
-  // حذف .00 اضافی از موجودی
   const formattedBalance = Number(balance).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
@@ -534,7 +606,7 @@ function openLinePage(empId) {
             </div>
             <div class="emp-name-title">
               <div class="emp-fullname"><span class="blink-dot"></span> ${fullName}</div>
-              <div class="emp-badge blink">● ONLINE</div>            <!-- چشمک‌زن -->
+              <div class="emp-badge blink">● ONLINE</div>
             </div>
             <div style="font-size:20px; font-weight:700; color:#00ff88; text-shadow:0 0 20px rgba(0,255,136,0.2);">
               €${formattedBalance}
@@ -604,7 +676,7 @@ function openLinePage(empId) {
           <div style="margin:6px 0;">AFRICA: <span class="online-blink blink">${emp.documents.stopNetwork ? "STOPPED" : "ONLINE"}</span></div>
         </div>
 
-        <!-- DATE & LINE CODE (با لیبل‌های چشمک‌زن) -->
+        <!-- DATE & LINE CODE -->
         <div class="cyber-panel">
           <div style="font-size:12px;opacity:.7;" class="blink-label">START DATE</div>
           <input id="startDate" type="text" ${currentMode === 'admin' ? "" : "readonly"} value="${new Date(start).toISOString().split('T')[0]}" style="width:100%;margin-bottom:10px;background:${currentMode === 'admin' ? '#001f12' : 'transparent'};border:${currentMode === 'admin' ? '1px solid #00ff88' : 'none'};outline:none;color:#00ff88;padding:6px;">
@@ -707,7 +779,8 @@ function closeLinePage() {
   const overlay = document.getElementById('lineOverlay');
   if (overlay) overlay.remove();
   
-  // اگر کاربر ادمین نیست (کارمند)، برگرد به صفحه اصلی
+  window.removeEventListener('popstate', preventBack);
+  
   if (!window.isAdmin) {
     document.getElementById('mainApp').style.display = 'flex';
     renderAllCards();
@@ -715,11 +788,10 @@ function closeLinePage() {
 }
 
 // ========== LINE Control Functions ==========
-function saveLineData(empId) {
+async function saveLineData(empId) {
   const emp = employees.find(e => e.id == empId);
   if (!emp) return;
 
-  // اگر ادمین است، مقادیر را از کارت بالا (Employee Info Card) می‌خوانیم
   if (currentMode === 'admin') {
     const birthInput = document.getElementById('birthDateEdit');
     const phoneInput = document.getElementById('phoneEdit');
@@ -732,95 +804,91 @@ function saveLineData(empId) {
     if (lineCodeTop) emp.documents.lineCode = lineCodeTop.value;
   }
 
-  // تاریخ شروع (در بخش پایین صفحه)
   const startDateInput = document.getElementById('startDate');
   if (startDateInput) {
     emp.documents.expiryStart = new Date(startDateInput.value + "T00:00:00").getTime();
   }
 
-  // اگر کاربر ادمین نباشد (یا در هر دو حالت) مقدار lineCode پایین را هم بگیریم
   const lineCodeBottom = document.getElementById('lineCodeEdit');
   if (lineCodeBottom && currentMode !== 'admin') {
     emp.documents.lineCode = lineCodeBottom.value;
   }
-  // برای ادمین اگر lineCodeBottom هم تغییری کرده باشد، اما ما قبلاً از بالا گرفتیم، 
-  // ولی برای اطمینان در صورتی که بالا تغییر نکرده باشد، از پایین می‌گیریم.
   if (currentMode === 'admin' && lineCodeBottom) {
     if (!document.getElementById('lineCodeEditTop').value) {
       emp.documents.lineCode = lineCodeBottom.value;
     }
   }
 
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   alert("✅ LINE UPDATED");
   closeLinePage();
 }
 
 // ========== Toggle Functions ==========
-function toggleCPU(empId) {
+async function toggleCPU(empId) {
   const emp = employees.find(e => e.id == empId);
   if (!emp) return;
   emp.documents.stopCPU = !emp.documents.stopCPU;
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   closeLinePage();
   openLinePage(empId);
 }
 
-function toggleRAM(empId) {
+async function toggleRAM(empId) {
   const emp = employees.find(e => e.id == empId);
   if (!emp) return;
   emp.documents.stopRAM = !emp.documents.stopRAM;
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   closeLinePage();
   openLinePage(empId);
 }
 
-function toggleNetwork(empId) {
+async function toggleNetwork(empId) {
   const emp = employees.find(e => e.id == empId);
   if (!emp) return;
   emp.documents.stopNetwork = !emp.documents.stopNetwork;
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   closeLinePage();
   openLinePage(empId);
 }
 
-function toggleLogs(empId) {
+async function toggleLogs(empId) {
   const emp = employees.find(e => e.id == empId);
   if (!emp) return;
   emp.documents.stopLogs = !emp.documents.stopLogs;
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   closeLinePage();
   openLinePage(empId);
 }
 
-function toggleMovement(empId) {
+async function toggleMovement(empId) {
   const emp = employees.find(e => e.id == empId);
   if (!emp) return;
   emp.documents.stopMovement = !emp.documents.stopMovement;
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   closeLinePage();
   openLinePage(empId);
 }
 
-function toggleSignal(empId) {
+async function toggleSignal(empId) {
   const emp = employees.find(e => e.id == empId);
   if (!emp) return;
   emp.documents.stopSignal = !emp.documents.stopSignal;
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   closeLinePage();
   openLinePage(empId);
 }
 
-function toggleSignalBar(empId) {
+async function toggleSignalBar(empId) {
   const emp = employees.find(e => e.id == empId);
   if (!emp) return;
   emp.documents.stopSignalBar = !emp.documents.stopSignalBar;
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   closeLinePage();
   openLinePage(empId);
 }
 
-// ========== Dynamic Effect Functions (used inside LINE) ==========
+// ========== Dynamic Effect Functions ==========
 function startServerLoad(emp) {
   const cpu = document.getElementById("cpu");
   const ram = document.getElementById("ram");
@@ -1091,7 +1159,7 @@ function startSignalChart() {
   drawSignalChart();
 }
 
-// ========== Render Cards (main page) ==========
+// ========== Render Cards ==========
 function renderCard(emp, isAdmin) {
   const docs = emp.documents || {};
 
@@ -1186,12 +1254,10 @@ function renderAllCards() {
     html += '<div class="no-data">⛔ No employees found</div>';
   } else {
     if (isAdmin) {
-      // ادمین همه کارمندها رو می‌بینه
       employees.forEach(emp => {
         html += renderCard(emp, isAdmin);
       });
     } else {
-      // کارمند فقط کارت خودش رو می‌بینه
       const empId = currentUser?.emp?.id;
       const emp = employees.find(e => e.id == empId);
       if (emp) {
@@ -1200,9 +1266,7 @@ function renderAllCards() {
     }
   }
 
-  // کارت LINE با قفل
   if (isAdmin) {
-    // ادمین: کنترل کامل LINE
     const firstEmp = employees[0];
     const isLocked = firstEmp?.documents?.lineLocked || false;
     html += `
@@ -1215,7 +1279,6 @@ function renderAllCards() {
       </div>
     `;
   } else {
-    // کارمند: فقط در صورت قفل نبودن می‌تونه وارد بشه
     const empId = currentUser?.emp?.id;
     const emp = employees.find(e => e.id == empId);
     const isLocked = emp?.documents?.lineLocked || false;
@@ -1237,13 +1300,12 @@ function renderAllCards() {
 
   container.innerHTML = html;
 }
+
 // ========== Mode Switch ==========
 function switchMode(mode) {
   currentMode = mode;
-  // نمایش mainApp
   document.getElementById('mainApp').style.display = 'flex';
   
-  // فقط ادمین می‌تواند دکمه‌های تغییر حالت را ببیند
   const modeContainer = document.getElementById('modeSwitchContainer');
   if (window.isAdmin) {
     modeContainer.style.display = 'block';
@@ -1257,53 +1319,84 @@ function switchMode(mode) {
 }
 
 // ========== Init ==========
-function loadData() {
-  const stored = localStorage.getItem('appEmployees');
-  if (stored) {
-    try {
-      employees = JSON.parse(stored);
-    } catch(e) {}
-  }
+async function loadData() {
+  // Wait for auth
+  await new Promise(resolve => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      unsubscribe();
+      resolve();
+    });
+  });
+  
+  await loadEmployeesFromDatabase();
   renderAllCards();
 }
 
-if (!localStorage.getItem('appEmployees')) {
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
-}
-
-window.addEventListener('DOMContentLoaded', async () => {
-  loadData();
-  
-  document.getElementById('mainApp').style.display = 'none';
-  document.getElementById('loginOverlay').style.display = 'none';
-  
-  // اسپلش
-  await showSplashScreen();
-  
-  // پاک کردن اسپلش
-  document.getElementById('app').innerHTML = '';
-  document.getElementById('app').style.display = 'none';
-  
-  // برگردوندن بک‌گراند employee
-  document.body.classList.add('logged-in');
-  
-  // نمایش لاگین
-  document.getElementById('loginOverlay').style.display = 'flex';
-});
-function toggleLineLock(empId) {
+async function toggleLineLock(empId) {
   const emp = employees.find(e => e.id == empId);
   if (!emp) return;
   if (!emp.documents) emp.documents = {};
   emp.documents.lineLocked = !emp.documents.lineLocked;
-  localStorage.setItem('appEmployees', JSON.stringify(employees));
+  await saveEmployeesToDatabase();
   renderAllCards();
 }
-// ========== WELCOME OVERLAY ==========
+
 // ========== LOADING OVERLAY ==========
 function showLoadingOverlay() {
   document.getElementById('loadingOverlay').style.display = 'flex';
 }
+function checkConnection() {
+  if (!navigator.onLine) {
+    showCustomAlert('⚠️ No internet connection', 'CONNECTION ERROR');
+    return false;
+  }
+  return true;
+}
 
-function hideLoadingOverlay() {
-  document.getElementById('loadingOverlay').style.display = 'none';
-                       }
+// چک مداوم
+window.addEventListener('online', () => {
+  console.log('✅ Online');
+});
+
+window.addEventListener('offline', () => {
+  showCustomAlert('⚠️ Internet connection lost', 'CONNECTION ERROR');
+});
+
+window.addEventListener('DOMContentLoaded', async () => {
+  // چک اینترنت
+  if (!navigator.onLine) {
+    document.getElementById('app').innerHTML = `
+      <div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#000;color:#ff5252;font-family:'Courier New',monospace;text-align:center;flex-direction:column;">
+        <div style="font-size:60px;margin-bottom:20px;">📡</div>
+        <div style="font-size:18px;letter-spacing:2px;">NO INTERNET</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:10px;">Please connect to the internet</div>
+        <button onclick="location.reload()" style="margin-top:30px;padding:12px 30px;background:rgba(255,82,82,0.2);border:1px solid #ff5252;color:#ff5252;border-radius:8px;cursor:pointer;font-family:'Courier New',monospace;">🔄 RETRY</button>
+      </div>
+    `;
+    return;
+  }
+  
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('loginOverlay').style.display = 'none';
+  
+  // اول Firebase
+  await loadData();
+  
+  // بعد اسپلش
+  await showSplashScreen();
+  
+  document.getElementById('app').innerHTML = '';
+  document.getElementById('app').style.display = 'none';
+  document.body.classList.add('logged-in');
+  document.getElementById('loginOverlay').style.display = 'flex';
+});
+
+// قطع اینترنت وسط کار
+window.addEventListener('offline', () => {
+  showCustomAlert('⚠️ Internet connection lost', 'CONNECTION ERROR');
+});
+
+// وصل شدن دوباره
+window.addEventListener('online', () => {
+  console.log('✅ Online');
+});
