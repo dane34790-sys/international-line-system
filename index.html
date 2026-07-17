@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>INTERNATIONAL LINE SYSTEM</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    /* جلوگیری از نمایش body قبل از اسپلش */
+    body {
+      background: #000000 !important;
+    }
+    body.logged-in {
+      background: url('images/employee-bg.png') no-repeat center center fixed !important;
+      background-size: cover !important;
+    }
+    #app {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 99999;
+      background: #000000;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SPLASH SCREEN CONTAINER -->
+  <div id="app"></div>
+
+  <!-- OTP NOTIFICATION FROM TOP -->
+  <div id="otpNotification" style="display:none; position:fixed; top:-100px; left:50%; transform:translateX(-50%); z-index:10001; transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); background:rgba(0,20,15,0.98); backdrop-filter:blur(20px); border:1px solid rgba(0,255,136,0.3); border-radius:0 0 20px 20px; padding:18px 28px; text-align:center; min-width:300px; box-shadow:0 10px 40px rgba(0,0,0,0.9), 0 0 30px rgba(0,255,136,0.15);">
+    <div style="color:#00ff88; font-family:'Courier New',monospace; font-size:11px; letter-spacing:3px; margin-bottom:8px;">🔐 YOUR VERIFICATION CODE</div>
+    <div id="otpNotificationCode" style="color:#00bcd4; font-family:'Courier New',monospace; font-size:32px; font-weight:bold; letter-spacing:8px;"></div>
+    <div style="color:rgba(255,255,255,0.3); font-size:10px; margin-top:6px;">This code will expire in 30 seconds</div>
+  </div>
+
+  <!-- LOGIN OVERLAY -->
+  <div id="loginOverlay" style="display:none;">
+    <div class="glass-panel">
+      <div class="glass-title">INTERNATIONAL LINE SYSTEM</div>
+      <div class="glass-subtitle">Secure Access Portal</div>
+      <input id="loginId" type="text" placeholder="Employee ID" class="glass-input">
+      <input id="loginPassword" type="password" placeholder="Password" class="glass-input">
+      <button onclick="handleLogin()" class="glass-btn">🔐 SIGN IN</button>
+      <div id="loginError" class="error-text" style="display:none;">Invalid ID or Password</div>
+    </div>
+  </div>
+
+  <!-- OTP VERIFY PANEL -->
+  <div id="otpOverlay" style="display:none;">
+    <div class="glass-panel" style="max-width:400px;">
+      <div class="glass-title">ENTER VERIFICATION CODE</div>
+      <div class="glass-subtitle">Code sent to your device</div>
+      <div class="otp-inputs">
+        <input type="text" maxlength="1" class="otp-digit" id="otp1" oninput="otpAutoFocus(this)">
+        <input type="text" maxlength="1" class="otp-digit" id="otp2" oninput="otpAutoFocus(this)">
+        <input type="text" maxlength="1" class="otp-digit" id="otp3" oninput="otpAutoFocus(this)">
+        <input type="text" maxlength="1" class="otp-digit" id="otp4" oninput="otpAutoFocus(this)">
+        <input type="text" maxlength="1" class="otp-digit" id="otp5" oninput="otpAutoFocus(this)">
+        <input type="text" maxlength="1" class="otp-digit" id="otp6" oninput="otpAutoFocus(this)">
+      </div>
+      <button onclick="verifyOTP()" class="glass-btn">✓ VERIFY CODE</button>
+      <button id="resendBtn" onclick="resendOTP()" class="glass-btn" style="background:rgba(255,255,255,0.05); color:#00bcd4; margin-top:8px;">📤 RESEND CODE</button>
+      <div id="otpTimer" class="timer-text">⏳ 30s</div>
+      <div id="otpError" class="error-text" style="display:none;">Invalid verification code</div>
+    </div>
+  </div>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loadingOverlay" style="display:none;">
+    <div class="glass-panel" style="text-align:center;">
+      <div class="glass-title" style="margin-bottom:20px;">SECURE CONNECTION</div>
+      <div style="width:60px; height:60px; border:3px solid rgba(0,255,136,0.2); border-top:3px solid #00ff88; border-radius:50%; margin:0 auto 15px; animation: spin 1s linear infinite;"></div>
+      <div class="glass-subtitle" style="margin-bottom:0;">Establishing secure channel...</div>
+      <div style="font-size:11px; color:rgba(0,255,136,0.4); margin-top:8px;">Please wait</div>
+    </div>
+  </div>
+
+  <!-- WELCOME OVERLAY -->
+  <div id="welcomeOverlay" style="display:none;">
+    <div style="background:rgba(0,20,15,0.6); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(0,255,136,0.2); border-radius:20px; padding:30px 25px; text-align:center;">
+      <div style="font-family:'Courier New',monospace; font-size:24px; font-weight:bold; color:#00ff88; letter-spacing:3px; margin-bottom:10px; text-shadow:0 0 20px rgba(0,255,136,0.5);">INTERNATIONAL</div>
+      <div style="font-family:'Courier New',monospace; font-size:20px; font-weight:bold; color:#00ff88; letter-spacing:2px; margin-bottom:15px; text-shadow:0 0 20px rgba(0,255,136,0.5);">LINE SYSTEM</div>
+      <div style="width:50px; height:2px; background:rgba(0,255,136,0.5); margin:0 auto 15px;"></div>
+      <div style="font-family:'Courier New',monospace; font-size:11px; color:rgba(0,255,136,0.5); letter-spacing:2px;">SECURE ACCESS GRANTED</div>
+    </div>
+  </div>
+
+  <!-- CUSTOM ALERT OVERLAY -->
+  <div id="customAlertOverlay" style="display:none;">
+    <div class="glass-panel" style="max-width:380px;">
+      <div class="glass-title" id="alertTitle">INTERNATIONAL LINE SYSTEM</div>
+      <div class="glass-subtitle" id="alertMessage" style="margin-bottom:20px;"></div>
+      <button onclick="closeCustomAlert()" class="glass-btn">OK</button>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="mainApp" style="display:none; width:100%;">
+    <div id="modeSwitchContainer" style="display: none;">
+      <div class="mode-switch">
+        <button id="empModeBtn" class="mode-btn active" onclick="switchMode('employee')">👤 Employee</button>
+        <button id="admModeBtn" class="mode-btn" onclick="switchMode('admin')">🛡️ Admin</button>
+      </div>
+    </div>
+    <div class="container" id="appContainer"></div>
+  </div>
+
+  <script src="earth.js"></script>
+  <script src="app.js"></script>
+</body>
+  </html>
