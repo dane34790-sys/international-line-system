@@ -1,0 +1,944 @@
+/* ==========================================
+   MAIN PAGE (Employee/Admin Cards)
+   ========================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Courier New', monospace;
+  background: #000000 !important;
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 20px 10px;
+}
+
+/* بعد از اسپلش، body به حالت عادی برمی‌گرده */
+body.logged-in {
+  background: url('images/employee-bg.png') no-repeat center center fixed !important;
+  background-size: cover !important;
+}
+
+#app {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 99999;
+  background: #000000;
+}
+
+.mode-switch {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 999;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 30px;
+  padding: 5px;
+  display: flex;
+  gap: 5px;
+}
+
+.mode-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 13px;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.mode-btn.active {
+  background: #00c853;
+  color: #000;
+  box-shadow: 0 0 15px rgba(0,200,83,0.3);
+}
+
+.container {
+  width: 100%;
+  max-width: 450px;
+  margin-top: 70px;
+  padding-bottom: 30px;
+}
+
+.card {
+  background: rgba(0,20,10,0.7);
+  backdrop-filter: blur(20px);
+  border-radius: 15px;
+  padding: 20px 18px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(0,255,136,0.2);
+  box-shadow: 0 0 25px rgba(0,255,136,0.05);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0,255,136,0.08);
+}
+
+.field:last-of-type {
+  border-bottom: none;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(0,255,136,0.7);
+  font-weight: 500;
+}
+
+.field-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #00ff88;
+  text-align: right;
+  word-break: break-word;
+  max-width: 60%;
+}
+
+.admin-field {
+  margin-bottom: 15px;
+}
+
+.admin-field label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(0,255,136,0.7);
+  margin-bottom: 4px;
+}
+
+.admin-input {
+  background: rgba(0,20,10,0.5);
+  border: 1px solid rgba(0,255,136,0.3);
+  color: #00ff88;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  width: 100%;
+  outline: none;
+  font-family: 'Courier New', monospace;
+  transition: border 0.2s;
+}
+
+.admin-input:focus {
+  border-color: #00ff88;
+  box-shadow: 0 0 10px rgba(0,255,136,0.2);
+}
+
+.btn-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  font-family: 'Courier New', monospace;
+}
+
+.btn-save {
+  background: #00c853;
+  color: #000;
+}
+
+.btn-delete {
+  background: #ff1744;
+  color: #fff;
+}
+
+.line-section {
+  margin-top: 15px;
+  border-top: 1px solid rgba(0,255,136,0.1);
+  padding-top: 12px;
+}
+
+.line-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: bold;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.line-status.active {
+  background: rgba(0,255,136,0.05);
+  border: 1px solid rgba(0,255,136,0.15);
+  color: #00e676;
+}
+
+.line-status.inactive {
+  background: rgba(255,82,82,0.05);
+  border: 1px solid rgba(255,82,82,0.15);
+  color: #ff5252;
+}
+
+.line-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+}
+
+.line-btn.active {
+  background: #00c853;
+  color: #000;
+}
+
+.line-btn.inactive {
+  background: #ff1744;
+  color: #fff;
+}
+
+.no-data {
+  text-align: center;
+  color: rgba(255,255,255,0.3);
+  padding: 40px;
+  font-size: 16px;
+}
+
+/* ==========================================
+   LINE PAGE OVERLAY - ORIGINAL STYLE
+   ========================================== */
+.scan {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;                           /* باریک و دقیق */
+  background: linear-gradient(to right,
+    transparent 0%,
+    rgba(0, 255, 136, 0.9) 15%,
+    #00ff88 50%,
+    rgba(0, 255, 136, 0.9) 85%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 8px #00ff88,
+    0 0 20px #00ff88,
+    0 0 40px rgba(0, 255, 136, 0.8),
+    0 0 80px rgba(0, 255, 136, 0.5);
+  z-index: 3;
+  pointer-events: none;
+  animation: scanLine 6s linear infinite;
+}
+
+/* خط دوم – کمی پایین‌تر و با رنگ فیروزه‌ای */
+.scan::after {
+  content: '';
+  position: absolute;
+  top: 6px;                              /* فاصله از خط اصلی */
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right,
+    transparent 0%,
+    rgba(0, 188, 212, 0.8) 20%,
+    #00bcd4 50%,
+    rgba(0, 188, 212, 0.8) 80%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 5px #00bcd4,
+    0 0 15px #00bcd4,
+    0 0 30px rgba(0, 188, 212, 0.6);
+  animation: scanLineAfter 6s linear infinite;
+}
+
+@keyframes scanLine {
+  0%   { top: -10px; opacity: 0.1; }
+  5%   { opacity: 1; }
+  95%  { opacity: 1; }
+  100% { top: 105%; opacity: 0.1; }
+}
+
+/* حرکت خط دوم هماهنگ با خط اصلی */
+@keyframes scanLineAfter {
+  0%   { top: -4px; opacity: 0.1; }
+  5%   { opacity: 0.9; }
+  95%  { opacity: 0.9; }
+  100% { top: calc(105% + 6px); opacity: 0.1; }
+}
+
+.access {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #00ff88;
+  font-size: 2.5rem;
+  font-weight: bold;
+  text-shadow: 0 0 30px #00ff88, 0 0 60px #00ff88;
+  opacity: 0;
+  animation: accessFlash 1.5s ease-out forwards;
+  z-index: 3;
+  pointer-events: none;
+  letter-spacing: 4px;
+}
+
+@keyframes accessFlash {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); }
+}
+
+/* Overlay container */
+#lineOverlay {
+  font-family: 'Courier New', monospace;
+  background: #000 !important;
+}
+
+.dashboard {
+  padding: 10px 5px;
+}
+
+/* Employee Info Card */
+.employee-info-card {
+  background: rgba(0, 20, 10, 0.85);
+  border: 1px solid rgba(0, 255, 136, 0.4);
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.1);
+}
+
+.emp-card-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.emp-avatar i {
+  font-size: 40px;
+  color: #00ff88;
+  text-shadow: 0 0 10px #00ff88;
+}
+
+.emp-name-title {
+  flex: 1;
+}
+
+.emp-fullname {
+  font-size: 20px;
+  font-weight: bold;
+  color: #00ff88;
+  text-shadow: 0 0 8px #00ff88;
+  letter-spacing: 1px;
+}
+
+.emp-badge {
+  font-size: 12px;
+  color: #00ff88;
+  margin-top: 3px;
+}
+
+.emp-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.emp-info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.emp-info-label {
+  font-size: 11px;
+  color: rgba(0, 255, 136, 0.7);
+  margin-bottom: 2px;
+}
+
+.emp-info-value {
+  font-size: 14px;
+  font-weight: bold;
+  color: #00ff88;
+  word-break: break-all;
+}
+
+/* Cyber Panels */
+.cyber-panel {
+  background: rgba(0, 20, 10, 0.6);
+  border: 1px solid rgba(0, 255, 136, 0.25);
+  border-radius: 10px;
+  padding: 12px 15px;
+  margin-bottom: 15px;
+  color: #00ff88;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.05);
+}
+
+.cyber-title {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px #00ff88;
+  border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+  padding-bottom: 5px;
+}
+
+.bar {
+  width: 100%;
+  height: 10px;
+  background: #001a0a;
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 6px 0 12px 0;
+  border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #00ff88, #00cc66);
+  box-shadow: 0 0 15px #00ff88;
+  transition: width 0.5s;
+}
+
+/* کلاس‌های چشمک‌زن که از keyframes blink استفاده می‌کنند */
+.online-blink {
+  animation: blink 1s infinite;
+  font-weight: bold;
+}
+
+/* چشمک‌زن عمومی */
+.blink {
+  animation: blink 1s infinite;
+}
+
+/* نقطه آبی چشمک‌زن */
+.blink-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #00bcd4;
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: blink 1.5s infinite;
+  vertical-align: middle;
+}
+
+/* لیبل چشمک‌زن (START DATE و غیره) */
+.blink-label {
+  animation: blink 2s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Signal Monitor */
+.signal-monitor {
+  margin-top: 15px;
+}
+
+.signal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.signal-state {
+  font-size: 14px;
+  font-weight: bold;
+  color: #00ff88;
+  text-shadow: 0 0 8px #00ff88;
+}
+
+.signal-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.signal-box {
+  background: rgba(0, 20, 10, 0.6);
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.signal-label {
+  font-size: 10px;
+  color: rgba(0, 255, 136, 0.6);
+  margin-bottom: 4px;
+}
+
+.signal-value {
+  font-size: 15px;
+  font-weight: bold;
+  color: #00ff88;
+  text-shadow: 0 0 5px #00ff88;
+}
+
+/* Earth Panel */
+.earth-panel canvas {
+  width: 100%;
+  height: 160px;
+  background: #000;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.network-status {
+  margin-top: 10px;
+}
+
+.status-title {
+  font-size: 12px;
+  color: rgba(0, 255, 136, 0.7);
+}
+
+.status-online {
+  color: #00ff88;
+  margin: 5px 0;
+  font-weight: bold;
+}
+
+.status-grid {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.status-box {
+  flex: 1;
+  background: rgba(0, 20, 10, 0.6);
+  padding: 8px;
+  border-radius: 6px;
+  text-align: center;
+  border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.status-box span {
+  display: block;
+  font-size: 10px;
+  color: rgba(0, 255, 136, 0.6);
+}
+
+.status-box b {
+  font-size: 18px;
+  color: #00ff88;
+  text-shadow: 0 0 8px #00ff88;
+}
+
+/* Logs */
+.logs {
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: 11px;
+}
+
+.logs::-webkit-scrollbar {
+  width: 4px;
+}
+
+.logs::-webkit-scrollbar-track {
+  background: #001a0a;
+}
+
+.logs::-webkit-scrollbar-thumb {
+  background: #00ff88;
+  border-radius: 4px;
+}
+
+/* Employee Status Mini Monitor */
+.mini-monitor .status-line {
+  margin: 5px 0;
+  font-size: 12px;
+}
+
+.signal-bar {
+  width: 100%;
+  height: 6px;
+  background: #001a0a;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 5px;
+  border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+#signalFill {
+  width: 95%;
+  height: 100%;
+  background: #00ff88;
+  box-shadow: 0 0 10px #00ff88;
+}
+
+.system-health {
+  text-align: center;
+}
+
+/* LED indicator */
+.led {
+  position: fixed;
+  bottom: 15px;
+  right: 15px;
+  width: 10px;
+  height: 10px;
+  background: #00ff88;
+  border-radius: 50%;
+  box-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88;
+  animation: blink 1.2s infinite;
+  z-index: 10;
+}
+
+/* Buttons inside LINE overlay */
+#lineOverlay button {
+  font-family: 'Courier New', monospace;
+}
+
+/* Adjust the close button */
+#lineOverlay button:first-of-type {
+  background: #ff1744;
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background 0.2s;
+}
+
+#lineOverlay button:first-of-type:hover {
+  background: #d50000;
+}
+
+/* Chart canvas */
+#signalChart {
+  width: 100%;
+  height: 170px;
+  display: block;
+  margin-top: 5px;
+}
+
+/* چیدمان عمودی فیلدهای کارت اطلاعات */
+.emp-info-grid-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.emp-info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.emp-info-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: rgba(0, 255, 136, 0.8);
+  margin-bottom: 4px;
+}
+
+/* نقطهٔ آبی داخل لیبل */
+.emp-info-label span[style*="color:#00bcd4"] {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* مقدار فیلدها (حالت کارمند) */
+.emp-info-value {
+  font-size: 15px;
+  font-weight: bold;
+  color: #00ff88;
+  word-break: break-all;
+  background: rgba(0, 20, 10, 0.5);
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+/* برای input های ادمین */
+.emp-info-item input {
+  background: rgba(0, 20, 10, 0.8);
+  border: 1px solid #00ff88;
+  color: #00ff88;
+  padding: 8px;
+  font-family: 'Courier New', monospace;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ==========================================
+   GLASS PANELS (Login, OTP, Alert)
+   ========================================== */
+#loginOverlay, #otpOverlay, #customAlertOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.glass-panel {
+  background: rgba(0, 20, 15, 0.5) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 1px solid rgba(0, 255, 136, 0.25) !important;
+  border-radius: 20px !important;
+  padding: 22px 18px !important;
+  max-width: 320px !important;
+  width: 85% !important;
+  text-align: center !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(0,255,136,0.08) !important;
+  margin: 0 auto !important;
+}
+
+.glass-title {
+  font-family: 'Courier New', monospace !important;
+  font-size: 15px !important;
+  font-weight: bold !important;
+  color: #00ff88 !important;
+  letter-spacing: 2px !important;
+  margin-bottom: 6px !important;
+  text-shadow: 0 0 15px rgba(0,255,136,0.4) !important;
+}
+
+.glass-subtitle {
+  font-family: 'Courier New', monospace !important;
+  font-size: 10px !important;
+  color: rgba(0,255,136,0.5) !important;
+  margin-bottom: 18px !important;
+  letter-spacing: 1px !important;
+}
+
+.glass-input {
+  width: 100% !important;
+  padding: 10px 12px !important;
+  margin-bottom: 12px !important;
+  background: rgba(0,30,15,0.6) !important;
+  border: 1px solid rgba(0,255,136,0.3) !important;
+  border-radius: 10px !important;
+  color: #00ff88 !important;
+  font-family: 'Courier New', monospace !important;
+  font-size: 13px !important;
+  outline: none !important;
+  transition: all 0.3s !important;
+  box-sizing: border-box !important;
+}
+
+.glass-input:focus {
+  border-color: #00ff88 !important;
+  box-shadow: 0 0 15px rgba(0,255,136,0.15) !important;
+}
+
+.glass-input::placeholder {
+  color: rgba(0,255,136,0.3) !important;
+}
+
+.glass-btn {
+  width: 100% !important;
+  padding: 10px !important;
+  background: rgba(0,255,136,0.1) !important;
+  border: 1px solid rgba(0,255,136,0.3) !important;
+  border-radius: 10px !important;
+  color: #00ff88 !important;
+  font-family: 'Courier New', monospace !important;
+  font-size: 13px !important;
+  font-weight: bold !important;
+  cursor: pointer !important;
+  letter-spacing: 1px !important;
+  backdrop-filter: blur(5px) !important;
+  -webkit-backdrop-filter: blur(5px) !important;
+}
+
+.glass-btn:hover {
+  background: rgba(0,255,136,0.2) !important;
+  box-shadow: 0 0 20px rgba(0,255,136,0.2) !important;
+}
+
+/* OTP Inputs */
+.otp-inputs {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.otp-digit {
+  width: 45px;
+  height: 55px;
+  text-align: center;
+  font-size: 24px;
+  font-family: 'Courier New', monospace;
+  background: rgba(0,30,15,0.6);
+  border: 1px solid rgba(0,255,136,0.3);
+  border-radius: 10px;
+  color: #00ff88;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.otp-digit:focus {
+  border-color: #00ff88;
+  box-shadow: 0 0 15px rgba(0,255,136,0.2);
+}
+
+/* Timer */
+.timer-text {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #00bcd4;
+  margin-top: 10px;
+  letter-spacing: 1px;
+}
+
+/* Error / Success */
+.error-text {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #ff5252;
+  margin-top: 10px;
+}
+
+.success-text {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #00ff88;
+}
+
+/* Main app container adjustment */
+#mainApp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Loading spinner */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Loading overlay */
+#loadingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 10002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* OTP Notification slide down */
+#otpNotification.show {
+  top: 0 !important;
+}
+
+/* OTP Notification slide down */
+#otpNotification.show {
+  top: 20px !important;
+}
+
+/* ==========================================
+   ALL OVERLAYS - Background & Flex
+   ========================================== */
+#loginOverlay,
+#otpOverlay,
+#loadingOverlay,
+#welcomeOverlay,
+#customAlertOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* عکس پس‌زمینه برای لاگین، OTP، لودینگ و welcome */
+#loginOverlay,
+#otpOverlay,
+#loadingOverlay,
+#welcomeOverlay {
+  background: url('images/auth-bg.png') no-repeat center center fixed !important;
+  background-size: cover !important;
+  background-color: #000 !important;
+}
+
+/* Alert overlay dark background */
+#customAlertOverlay {
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(15px);
+  z-index: 10000;
+}
+
+/* OTP Notification */
+#otpNotification.show {
+  top: 30px !important;
+}
+#welcomeOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10003;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background: url('images/auth-bg.png') no-repeat center center fixed !important;
+  background-size: cover !important;
+  background-color: #000 !important;
+  }
