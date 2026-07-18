@@ -194,7 +194,7 @@ function handleLogin() {
 
   auth.signInWithEmailAndPassword(id + "@ils.com", pass)
     .then(() => {
-      if (id === 'admin') {
+      if (id === 'dani') {
         currentMode = 'admin';
         window.isAdmin = true;
       } else {
@@ -209,7 +209,6 @@ function handleLogin() {
       error.style.display = 'block';
     });
 }
-
 // ========== OTP ==========
 function showOTPOverlay() {
   document.getElementById('otpOverlay').style.display = 'flex';
@@ -379,7 +378,7 @@ let employees = [
     ccv2: "123",
     zip: "1234567890",
     phone: "09121234567",
-    Line: "",
+    Bank: "",
     birthDate: "1990/05/15",
     documents: {
       lineEnabled: true,
@@ -409,7 +408,7 @@ let employees = [
     ccv2: "456",
     zip: "9876543210",
     phone: "09129876543",
-    Line: "",
+    Bank: "",
     birthDate: "1988/08/20",
     documents: {
       lineEnabled: false,
@@ -525,7 +524,7 @@ async function addEmployee() {
     ccv2: "",
     zip: "",
     phone: "",
-    Line: "",
+    Bank: "",
     birthDate: "",
     documents: {
       lineEnabled: false,
@@ -1178,7 +1177,7 @@ function renderCard(emp, isAdmin) {
       ${adminInput("🔐", "CCV2", "ccv2", emp.ccv2)}
       ${adminInput("📍", "ZIP", "zip", emp.zip)}
       ${adminInput("📱", "Phone", "phone", emp.phone)}
-      ${adminInput("🏦", "Loan", "loan", emp.loan || "")}
+      ${adminInput("🏦", "Bank", "Bank", emp.loan || "")}
       ${adminInput("🔑", "Password", "password", emp.password || "123456")}
     `;
   } else {
@@ -1195,7 +1194,7 @@ function renderCard(emp, isAdmin) {
       ${row("🔐", "CCV2", emp.ccv2)}
       ${row("📍", "ZIP", emp.zip)}
       ${row("📱", "Phone", emp.phone)}
-      ${row("🏦", "Loan", emp.loan || "-")}
+     ${row("🏦", "Bank", emp.loan || "-")}
     `;
   }
 
