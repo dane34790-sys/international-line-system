@@ -60,7 +60,7 @@ function handleLogin() {
   auth.signInWithEmailAndPassword(id + "@ils.com", pass)
     .then(async () => {
       if (id === 'dani') { currentMode = 'admin'; window.isAdmin = true; }
-      else { currentMode = 'employee'; window.isAdmin = false; const snap = await db.ref("employees").once("value"); const list = snap.val(); const emp = list.find(e => e.id === id); if (!emp) { error.style.display = 'block'; return; } currentUser = { type: 'employee', emp: emp }; }
+      else { currentMode = 'employee'; window.isAdmin = false; const snap = await db.ref("employees").once("value"); const list = snap.val(); const emp = Array.isArray(list) ? list.find(e => e.id === id) : Object.values(list).find(e => e.id === id); if (!emp) { error.style.display = 'block'; return; } currentUser = { type: 'employee', emp: emp }; }
       document.getElementById('loginOverlay').style.display = 'none'; showOTPOverlay();
     })
     .catch(() => { error.style.display = 'block'; });
