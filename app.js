@@ -122,19 +122,52 @@ async function checkLineActivation(empId) {
         }
         if (emp && emp.email) { 
             try { 
-                console.log("📧 Sending email to:", emp.email);
+                const nowDate = new Date();
+                const expiryDate = new Date(nowDate.getFullYear() + 5, nowDate.getMonth(), nowDate.getDate());
+                
+                const emailBody = `╔══════════════════════════════════════════╗
+║   🏦 COMMERZBANK                        ║
+║   International Line System              ║
+║   Moscow, Russian Federation             ║
+╠══════════════════════════════════════════╣
+║                                          ║
+║  Dear ${emp.name || 'Valued Customer'},  ║
+║                                          ║
+║  ✅ LINE ACTIVATION SUCCESSFUL           ║
+║                                          ║
+║  Your LINE has been activated:            ║
+║  📡 LINE: HANOVER 5690                  ║
+║  📅 Activated: ${nowDate.toLocaleDateString('en-GB')}                     ║
+║  ⏰ Time: ${nowDate.toLocaleTimeString('en-GB')} MSK        ║
+║  📅 Expiry: ${expiryDate.toLocaleDateString('en-GB')}                     ║
+║  ⏳ Duration: 5 Years                    ║
+║                                          ║
+║  💳 Card: **** ${(emp.cardNumber||'5098').slice(-4)}                   ║
+║  💰 Balance: €${emp.balance.toFixed(2)}       ║
+║  💸 Activation Fee: -€1.00              ║
+║                                          ║
+║  🌍 Status: ACTIVE in 189 Countries     ║
+║  🔒 Security: Quantum Encryption         ║
+║  🛡️ Fraud Protection: ENABLED            ║
+║                                          ║
+║  Thank you for choosing COMMERZBANK.     ║
+║                                          ║
+║  📧 Support: commerz.line.support@****   ║
+║  📞 +7 (495) ***-**-**                  ║
+║                                          ║
+║  ⚠️ This is an automated message.        ║
+║  Please do not reply.                    ║
+╚══════════════════════════════════════════╝`;
+                
                 const response = await fetch("https://script.google.com/macros/s/AKfycbxaHo_YL3TyeUKCyZQF3ZGEL-A4FK3HzW6r_zyRQNx8QKPOT2iR181quNzLU50phxZGhw/exec", { 
                     method: "POST", 
                     body: JSON.stringify({ 
                         to: emp.email, 
-                        subject: "✅ LINE HANOVER 5690 - Activated", 
-                        body: `Dear ${emp.name},\n\nYour LINE HANOVER 5690 has been ACTIVATED.\n\n💰 Balance: €${emp.balance.toFixed(2)}\n\nCOMMERZBANK Intl. Line System` 
+                        subject: "✅ LINE HANOVER 5690 - Activated for 5 Years", 
+                        body: emailBody
                     }) 
                 });
-                console.log("📧 Email response:", response.status);
             } catch(e) { console.error("📧 Email error:", e); } 
-        } else {
-            console.log("❌ No email for employee:", empId);
         }
         setTimeout(() => { openLinePage(empId); }, 2000);
         return { status: 'complete' };
