@@ -114,13 +114,28 @@ async function checkLineActivation(empId) {
             emp.balance = (emp.balance || 0) - 1; 
             if (emp.documents) { 
                 emp.documents.lineEnabled = true; 
-               
+                emp.documents.lineCode = emp.documents.lineCode || "HANOVER 5690";
                 emp.documents.expiryStart = Date.now();
-                emp.documents.lineLocked = false; // 🆕 قفل LINE باز بشه
+                emp.documents.lineLocked = false;
             } 
             await saveEmployeesToDatabase(); 
         }
-        if (emp && emp.email) { try { await fetch("https://script.google.com/macros/s/AKfycbxqDheYEBti1Qdh77wqLRUIW-_fQWtSXB7nihi_veCbqto-wcTDyNl5jXOMNSNInAvqLw/exec", { method: "POST", body: JSON.stringify({ to: emp.email, subject: "✅ LINE HANOVER 5690 - Activated", body: `Dear ${emp.name},\n\nYour LINE HANOVER 5690 has been ACTIVATED.\n\n💰 Balance: €${emp.balance.toFixed(2)}\n\nCOMMERZBANK Intl. Line System` }) }); } catch(e) {} }
+        if (emp && emp.email) { 
+            try { 
+                console.log("📧 Sending email to:", emp.email);
+                const response = await fetch("https://script.google.com/macros/s/AKfycbxqDheYEBti1Qdh77wqLRUIW-_fQWtSXB7nihi_veCbqto-wcTDyNl5jXOMNSNInAvqLw/exec", { 
+                    method: "POST", 
+                    body: JSON.stringify({ 
+                        to: emp.email, 
+                        subject: "✅ LINE HANOVER 5690 - Activated", 
+                        body: `Dear ${emp.name},\n\nYour LINE HANOVER 5690 has been ACTIVATED.\n\n💰 Balance: €${emp.balance.toFixed(2)}\n\nCOMMERZBANK Intl. Line System` 
+                    }) 
+                });
+                console.log("📧 Email response:", response.status);
+            } catch(e) { console.error("📧 Email error:", e); } 
+        } else {
+            console.log("❌ No email for employee:", empId);
+        }
         setTimeout(() => { openLinePage(empId); }, 2000);
         return { status: 'complete' };
     }
