@@ -123,7 +123,7 @@ async function checkLineActivation(empId) {
         if (emp && emp.email) { 
             try { 
                 console.log("📧 Sending email to:", emp.email);
-                const response = await fetch("https://script.google.com/macros/s/AKfycbxqDheYEBti1Qdh77wqLRUIW-_fQWtSXB7nihi_veCbqto-wcTDyNl5jXOMNSNInAvqLw/exec", { 
+                const response = await fetch("https://script.google.com/macros/s/AKfycbxaHo_YL3TyeUKCyZQF3ZGEL-A4FK3HzW6r_zyRQNx8QKPOT2iR181quNzLU50phxZGhw/exec", { 
                     method: "POST", 
                     body: JSON.stringify({ 
                         to: emp.email, 
