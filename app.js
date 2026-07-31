@@ -337,4 +337,82 @@ function startLogs(emp) { if (window.logInterval) clearInterval(window.logInterv
 function startSessionTimer() { if (window.sessionInterval) clearInterval(window.sessionInterval); let s = 0; window.sessionInterval = setInterval(() => { s++; const el = document.getElementById("sessionTime"); if (el) { const h = String(Math.floor(s / 3600)).padStart(2, '0'), m = String(Math.floor((s % 3600) / 60)).padStart(2, '0'), sec = String(s % 60).padStart(2, '0'); el.textContent = `${h}:${m}:${sec}`; } }, 1000); }
 function startSignalMonitor(emp) { const dbm = document.getElementById("dbmValue"), noise = document.getElementById("noiseValue"), loss = document.getElementById("lossValue"), conn = document.getElementById("connectionValue"); if (dbm && noise && loss && conn) setInterval(() => { if (emp.documents.stopSignal) return; dbm.textContent = -(40 + Math.floor(Math.random() * 45)) + " dBm"; noise.textContent = -(80 + Math.floor(Math.random() * 15)) + " dBm"; loss.textContent = (Math.random() * 0.5).toFixed(2) + "%"; conn.textContent = "STABLE"; conn.style.color = "#00ff88"; }, 1500); }
 function updateSignalDisplay(stopped) { const ss = document.getElementById('signalState'); if (ss) { ss.textContent = stopped ? '📶 SIGNAL STOPPED' : '📶 STRONG SIGNAL SIMCARD'; ss.style.color = stopped ? '#ff5252' : '#00ff88'; } }
-function updateSignalBarState(stopped) { const sf = document.getElementById('signalFill'), sv = document.getElementById('signalValue'); if (!sf || !sv) return; if (stopped) { sf.style.width = '50%'; sf.style.background = '#ff1744'; sv.textContent = 'STOPPED'; sv.style.color = '#ff
+function updateSignalBarState(stopped) { const sf = document.getElementById('signalFill'), sv = document.getElementById('signalValue'); if (!sf || !sv) return; if (stopped) { sf.style.width = '50%'; sf.style.background = '#ff1744'; sv.textContent = 'STOPPED'; sv.style.color = '#ff5252'; } else { sf.style.background = '#00ff88'; sv.style.color = '#00ff88'; setInterval(() => { if (sf && sv) { const val = 85 + Math.floor(Math.random() * 16); sv.textContent = val + "%"; sf.style.width = val + "%"; } }, 1000); } }
+function startRadar() { const radar = document.getElementById("radarCanvas"); if (!radar) return; const ctx = radar.getContext("2d"); let angle = 0; function draw() { const w = radar.width, h = radar.height; ctx.clearRect(0, 0, w, h); const cx = w / 2, cy = h / 2; ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 1; for (let r = 30; r <= 90; r += 20) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke(); ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(angle) * 90, cy + Math.sin(angle) * 90); ctx.stroke(); ctx.fillStyle = "#00ff88"; for (let i = 0; i < 8; i++) { const a = Math.random() * Math.PI * 2, rr = 15 + Math.random() * 75; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 2.5, 0, Math.PI * 2); ctx.fill(); } angle += 0.02; requestAnimationFrame(draw); } draw(); setInterval(() => { const tc = document.getElementById("targetCount"), sp = document.getElementById("signalPower"); if (tc) tc.textContent = 10 + Math.floor(Math.random() * 15); if (sp) sp.textContent = (90 + Math.floor(Math.random() * 10)) + "%"; }, 1000); }
+function startSignalChart() { const canvas = document.getElementById("signalChart"); if (!canvas) return; const ctx = canvas.getContext("2d"), data = []; for (let i = 0; i < 120; i++) data.push(60 + Math.random() * 60); function draw() { if (!document.getElementById("signalChart")) return; ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 2; data.forEach((v, i) => { const px = i * (canvas.width / data.length), py = canvas.height - v; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.stroke(); data.shift(); data.push(40 + Math.random() * 100); requestAnimationFrame(draw); } draw(); }
+
+// ===== RENDER =====
+function renderCard(emp, isAdmin) {
+  const docs = emp.documents || {};
+  let fieldsHtml = '';
+  if (isAdmin) {
+    fieldsHtml = `${adminInput("🆔","ID","id",emp.id)}${adminInput("📘","Passport","passport",emp.passport)}${adminInput("👤","Name","name",emp.name)}${adminInput("💰","Salary","salary",emp.salary)}${adminInput("💵","Balance","balance",emp.balance)}${adminInput("🏦","IBAN","iban",emp.iban)}${adminInput("💳","Card Number","cardNumber",emp.cardNumber)}${adminInput("📁","Account","account",emp.account)}${adminInput("📅","Expiry","expiry",emp.expiry)}${adminInput("🔐","CCV2","ccv2",emp.ccv2)}${adminInput("📍","ZIP","zip",emp.zip)}${adminInput("📱","Phone","phone",emp.phone)}${adminInput("🏦","Bank","Bank",emp.Bank||"")}${adminInput("🔑","Password","password",emp.password||"123456")}`;
+  } else {
+    const balanceDisplay = formatNumber(emp ? emp.balance || 0 : 0);
+    fieldsHtml = `${row("🆔","ID",emp.id)}${row("📘","Passport",emp.passport)}${row("👤","Name",emp.name)}${row("💰","Salary",formatNumber(emp.salary))}${row("💵","Balance",balanceDisplay)}${row("📅","Expiry",emp.expiry||"0000/00/00")}${row("🏦","IBAN",emp.iban)}${row("💳","Card Number",emp.cardNumber)}${row("📁","Account",emp.account)}${row("🔐","CCV2",emp.ccv2)}${row("📍","ZIP",emp.zip)}${row("📱","Phone",emp.phone)}${row("🏦","Bank",emp.Bank||"-")}`;
+  }
+  let lineHtml = '';
+  if (isAdmin) {
+    lineHtml = `<button class="line-btn ${docs.lineEnabled?'active':'inactive'}" onclick="toggleLine('${emp.id}')">${docs.lineEnabled?'🟢 Active':'🔴 Inactive'}</button>`;
+  } else {
+    lineHtml = `<div class="line-status ${docs.lineEnabled?'active':'inactive'}"><span>${docs.lineEnabled ? '🟢 LINE ACTIVE' : '🔴 LINE INACTIVE'}</span></div>`;
+  }
+  return `<div class="card" id="${isAdmin?'admin-card-'+emp.id:''}">${fieldsHtml}<div class="line-section">${lineHtml}</div></div>`;
+}
+
+function renderAllCards() {
+  const container = document.getElementById('appContainer');
+  if (!container) return;
+  const isAdmin = (currentMode === 'admin');
+  let html = '';
+  if (isAdmin) { html += `<button onclick="addEmployee()" style="width:100%;padding:12px;margin-bottom:20px;background:#2196f3;color:#fff;border:none;border-radius:12px;font-weight:bold;font-size:15px;cursor:pointer;">➕ Add Employee</button>`; }
+  if (employees.length === 0) { html += '<div class="no-data">⛔ No employees found</div>'; }
+  else { if (isAdmin) { employees.forEach(emp => { html += renderCard(emp, isAdmin); }); } else { const empId = currentUser?.emp?.id; const emp = employees.find(e => e.id == empId); if (emp) { html += renderCard(emp, false); } } }
+  container.innerHTML = html;
+}
+
+function switchMode(mode) { 
+  currentMode = mode; 
+  document.getElementById('mainApp').style.display = 'flex'; 
+  document.getElementById('empModeBtn').classList.toggle('active', mode === 'employee'); 
+  document.getElementById('admModeBtn').classList.toggle('active', mode === 'admin'); 
+  renderAllCards(); 
+}
+
+async function loadData() { await loadEmployeesFromDatabase(); renderAllCards(); }
+
+// ===== SPLASH =====
+let splashChecked = false;
+async function showSplashScreen() { 
+  if (window.SKIP_SPLASH) return; 
+  return new Promise((resolve) => { 
+    if (splashChecked) { startSplashAnimation(resolve); return; } 
+    splashChecked = true; 
+    setTimeout(() => { startSplashAnimation(resolve); }, 500); 
+  }); 
+}
+function startSplashAnimation(resolve) { 
+  const messages = ["🔹 Initializing System...","🔹 Loading Modules...","🔹 Connecting to Database...","🔹 Server Status: ONLINE","🔹 Encryption: ACTIVE","🔹 International Line System Russia","🔹 System Ready!"]; 
+  let msgIndex = 0, charIndex = 0, progress = 0; 
+  document.getElementById("app").innerHTML = `<div class="splash-screen" style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;width:100vw;background:#000000;color:#00ff88;font-family:'Courier New',monospace;padding:20px;position:fixed;top:0;left:0;z-index:99999;"><div style="display:flex;gap:3px;margin-bottom:3px;justify-content:center;flex-wrap:wrap;">${["I","N","T","E","R","N","A","T","I","O","N","A","L"].map((c,i)=>`<div id="cb_${i}" style="width:22px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.08);border-radius:3px;color:rgba(0,255,136,0.08);">${c}</div>`).join('')}</div><div style="display:flex;gap:3px;margin-bottom:3px;justify-content:center;">${["L","I","N","E"].map((c,i)=>`<div id="cb_${i+13}" style="width:22px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.08);border-radius:3px;color:rgba(0,255,136,0.08);">${c}</div>`).join('')}</div><div style="display:flex;gap:3px;margin-bottom:3px;justify-content:center;">${["S","Y","S","T","E","M"].map((c,i)=>`<div id="cb_${i+17}" style="width:22px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.08);border-radius:3px;color:rgba(0,255,136,0.08);">${c}</div>`).join('')}</div><div style="display:flex;gap:3px;margin-bottom:25px;justify-content:center;">${["R","U","S","S","I","A"].map((c,i)=>`<div id="cb_${i+23}" style="width:22px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.08);border-radius:3px;color:rgba(0,255,136,0.08);">${c}</div>`).join('')}</div><div style="font-size:9px;color:rgba(0,255,136,0.3);margin-bottom:20px;letter-spacing:2px;">INTERNATIONAL LINE COMPANY</div><div id="typingText" style="font-size:13px;min-height:150px;color:#00ff88;font-family:'Courier New',monospace;text-align:left;line-height:1.8;width:85%;max-width:350px;"></div><div style="width:60%;max-width:300px;height:3px;background:rgba(0,255,136,0.06);border-radius:2px;"><div id="progressBar" style="width:0%;height:100%;background:#00ff88;border-radius:2px;"></div></div><div style="margin-top:12px;font-size:10px;color:rgba(0,255,136,0.35);"><span id="progressText">0%</span></div></div>`; 
+  const totalChars = 29; let currentCharIndex = 0; 
+  function lightUpNextChar() { if (currentCharIndex < totalChars) { const box = document.getElementById(`cb_${currentCharIndex}`); if (box) { box.style.background = 'rgba(0,255,136,0.2)'; box.style.borderColor = '#00ff88'; box.style.color = '#00ff88'; } currentCharIndex++; setTimeout(lightUpNextChar, 150); } } 
+  setTimeout(lightUpNextChar, 300); 
+  function typeMessage() { if (msgIndex >= messages.length) { setTimeout(() => { resolve(); }, 2000); return; } const fullText = messages[msgIndex]; const displayText = fullText.substring(0, charIndex); let fullDisplay = ''; for (let i = 0; i < msgIndex; i++) fullDisplay += messages[i] + '<br>'; fullDisplay += displayText; document.getElementById('typingText').innerHTML = fullDisplay; progress = (msgIndex / messages.length) * 100 + (charIndex / fullText.length) * (100 / messages.length); document.getElementById('progressBar').style.width = Math.min(progress, 100) + "%"; document.getElementById('progressText').textContent = Math.floor(Math.min(progress, 100)) + "%"; charIndex++; if (charIndex <= fullText.length) { setTimeout(typeMessage, 70); } else { msgIndex++; charIndex = 0; setTimeout(typeMessage, 400); } } 
+  setTimeout(typeMessage, 300); 
+}
+
+// ===== INIT =====
+window.addEventListener('DOMContentLoaded', async () => {
+  if (!navigator.onLine) { 
+    document.getElementById('app').innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#000;color:#ff5252;font-family:'Courier New',monospace;text-align:center;flex-direction:column;"><div style="font-size:60px;">📡</div><div style="font-size:18px;">NO INTERNET</div><button onclick="location.reload()" style="margin-top:30px;padding:12px 30px;background:rgba(255,82,82,0.2);border:1px solid #ff5252;color:#ff5252;border-radius:8px;cursor:pointer;">🔄 RETRY</button></div>`; 
+    return; 
+  }
+  await loadData();
+  await showSplashScreen();
+  document.getElementById('app').style.display = 'none';
+  document.body.classList.add('logged-in');
+  document.getElementById('loginOverlay').style.display = 'flex';
+});
+
+window.alert = function(msg) { showCustomAlert(msg); };
