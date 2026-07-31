@@ -1,29 +1,17 @@
-const CACHE_NAME = 'ils-russia-v1';
-const urlsToCache = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js',
-  './earth.js',
-  './images/employee-bg.png',
-  './images/icon-512.png'
-];
-
+// پاک کردن همه کش‌های قدیمی
 self.addEventListener('install', event => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
-  );
 });
 
 self.addEventListener('activate', event => {
-  clients.claim();
+  event.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(keys.map(key => caches.delete(key)));
+    }).then(() => self.clients.claim())
+  );
 });
 
+// مستقیم از نتورک - هیچی کش نکن
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request))
-  );
+  event.respondWith(fetch(event.request));
 });
