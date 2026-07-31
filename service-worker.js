@@ -1,19 +1,24 @@
 const CACHE_NAME = 'ils-russia-v1';
 const urlsToCache = [
-  '/international-line-system/',
-  '/international-line-system/index.html',
-  '/international-line-system/style.css',
-  '/international-line-system/app.js',
-  '/international-line-system/earth.js',
-  '/international-line-system/images/employee-bg.png',
-  '/international-line-system/images/auth-bg.png'
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './earth.js',
+  './images/employee-bg.png',
+  './images/icon-512.png'
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
   );
+});
+
+self.addEventListener('activate', event => {
+  clients.claim();
 });
 
 self.addEventListener('fetch', event => {
