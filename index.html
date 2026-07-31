@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>INTERNATIONAL LINE SYSTEM</title>
   
+  <!-- Force English -->
+  <meta http-equiv="Content-Language" content="en">
+  <meta name="language" content="English">
+  
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,8 +20,16 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
+    * {
+      direction: ltr !important;
+      text-align: left !important;
+      unicode-bidi: isolate !important;
+      writing-mode: horizontal-tb !important;
+    }
     body {
       background: #000000 !important;
+      text-align: left !important;
+      direction: ltr !important;
     }
     body.logged-in {
       background: url('images/employee-bg.png') no-repeat center center fixed !important;
@@ -31,6 +43,15 @@
       height: 100%;
       z-index: 99999;
       background: #000000;
+    }
+    /* Fix for inputs and buttons */
+    input, button {
+      direction: ltr !important;
+      text-align: left !important;
+    }
+    input[type="password"], input[type="text"], input[type="number"], input[type="email"] {
+      direction: ltr !important;
+      text-align: left !important;
     }
   </style>
 </head>
@@ -133,4 +154,4 @@
     }
   </script>
 </body>
-</html>
+      </html>
