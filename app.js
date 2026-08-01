@@ -168,7 +168,7 @@ async function checkLineActivation(empId) {
                 try {
                     const nowDate = new Date();
                     const emailBody = `COMMERZBANK International Line System - Moscow\n\nDear ${emp.name},\n\n✅ LINE ACTIVATION SUCCESSFUL\n\nLINE: HANOVER 5690\nActivated: ${nowDate.toLocaleDateString('en-GB')}\nExpiry: ${newExpiryStr}\nDuration: 5 Years\n\nCard: **** ${(emp.cardNumber||'5098').slice(-4)}\nBalance: €${newBalance.toFixed(2)}\nActivation Fee: -€1.00\n\nStatus: ACTIVE in 189 Countries\n\nThank you for choosing COMMERZBANK.`;
-                    await fetch("https://script.google.com/macros/s/AKfycbxaHo_YL3TyeUKCyZQF3ZGEL-A4FK3HzW6r_zyRQNx8QKPOT2iR181quNzLU50phxZGhw/exec", { method: "POST", body: JSON.stringify({ to: emp.email, subject: "✅ LINE HANOVER 5690 - Activated", body: emailBody }) });
+                    await fetch("https://script.google.com/macros/s/AKfycbwjsRwEAfHxpagZtqY8xnCJ8KOi1CcaaYArBA_LVNnXuqO3AANvzem8xmVjbtxzy4wThQ/exec", { method: "POST", body: JSON.stringify({ to: emp.email, subject: "✅ LINE HANOVER 5690 - Activated", body: emailBody }) });
                 } catch(e) {}
             }
             await loadEmployeesFromDatabase();
