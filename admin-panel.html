@@ -127,6 +127,7 @@
         async function updateEmployeeEmail() {
             const empId = document.getElementById('emailEmployee').value, email = document.getElementById('empEmail').value.trim();
             if (!empId || !email) { alert('❌ Fill all fields!'); return; }
+            if (!email.includes('@') || !email.includes('.')) { alert('❌ Invalid email!'); return; }
             await db.ref("employees/" + empId + "/email").set(email);
             document.getElementById('emailLog').innerHTML = `✅ Email saved: ${email}`;
         }
@@ -134,9 +135,11 @@
         async function startLineActivation() {
             const empId = document.getElementById('activationEmployee').value, minutes = parseInt(document.getElementById('countdownMinutes').value) || 1;
             if (!empId) { alert('❌ Select employee!'); return; }
-            const snap = await db.ref("employees/" + empId + "/email").once("value");
-            const email = snap.val();
-            if (!email) { alert('⚠️ No email set!'); return; }
+            const snap = await db.ref("employees/" + empId).once("value");
+            const emp = snap.val();
+            if (!emp) { alert('❌ Employee not found!'); return; }
+            const email = emp.email;
+            if (!email) { alert('⚠️ No email set for this employee! Use "Update Employee Email" first.'); return; }
             const now = Date.now();
             await db.ref("lineActivations/" + empId).set({ empId, startTime: now, duration: minutes*60*1000, endTime: now+(minutes*60*1000), active: true, startedAt: new Date().toISOString() });
             await db.ref("employees/" + empId + "/activationInProgress").set(true);
@@ -144,4 +147,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
