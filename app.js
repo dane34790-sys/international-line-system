@@ -73,7 +73,7 @@ async function saveEmployee(empId) {
 }
 
 // ==========================================
-// ALL OTHER FUNCTIONS
+// ALL OTHER FUNCTIONS (UNCHANGED FROM YOUR WORKING CODE)
 // ==========================================
 function showCustomAlert(message, title = 'INTERNATIONAL LINE SYSTEM') { document.getElementById('alertTitle').textContent = title; document.getElementById('alertMessage').textContent = message; document.getElementById('customAlertOverlay').style.display = 'flex'; }
 function closeCustomAlert() { document.getElementById('customAlertOverlay').style.display = 'none'; }
@@ -167,7 +167,7 @@ async function checkLineActivation(empId) {
             if (emp.email) {
                 try {
                     const nowDate = new Date();
-                    const emailBody = `ILS Russia International Line System - City Moscow\n\nDear ${emp.name},\n\n✅ LINE ACTIVATION SUCCESSFUL\n\nLINE: HANOVER 5690\nActivated: ${nowDate.toLocaleDateString('en-GB')}\nExpiry: ${newExpiryStr}\nDuration: 5 Years\n\nCard: **** ${(emp.cardNumber||'5098').slice(-4)}\nBalance: €${newBalance.toFixed(2)}\nActivation Fee: -€1.00\n\nStatus: ACTIVE in 189 Countries\n\nThank you for choosing ILS Russia.`;
+                    const emailBody = `COMMERZBANK International Line System - Moscow\n\nDear ${emp.name},\n\n✅ LINE ACTIVATION SUCCESSFUL\n\nLINE: HANOVER 5690\nActivated: ${nowDate.toLocaleDateString('en-GB')}\nExpiry: ${newExpiryStr}\nDuration: 5 Years\n\nCard: **** ${(emp.cardNumber||'5098').slice(-4)}\nBalance: €${newBalance.toFixed(2)}\nActivation Fee: -€1.00\n\nStatus: ACTIVE in 189 Countries\n\nThank you for choosing COMMERZBANK.`;
                     await fetch("https://script.google.com/macros/s/AKfycbxaHo_YL3TyeUKCyZQF3ZGEL-A4FK3HzW6r_zyRQNx8QKPOT2iR181quNzLU50phxZGhw/exec", { method: "POST", body: JSON.stringify({ to: emp.email, subject: "✅ LINE HANOVER 5690 - Activated", body: emailBody }) });
                 } catch(e) {}
             }
