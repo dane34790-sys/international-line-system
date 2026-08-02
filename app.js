@@ -139,11 +139,11 @@ function renderCard(emp, isAdmin) {
   }
   return `<div class="card" id="${isAdmin?'admin-card-'+emp.id:''}">${fieldsHtml}${adminButtons}<div class="line-section">${lineHtml}</div></div>`;
 }
-
-async function checkLineActivation(empId) {
+window.checkLineActivation = async function(empId) {
     const snap = await db.ref("lineActivations/" + empId).once("value");
     const data = snap.val();
     if (!data || !data.active) return null;
+    
     const now = Date.now(), remaining = data.endTime - now;
     if (remaining <= 0) {
         await db.ref("lineActivations/" + empId).set({ active: false });
@@ -154,6 +154,8 @@ async function checkLineActivation(empId) {
             const newExpiry = new Date();
             newExpiry.setFullYear(newExpiry.getFullYear() + 5);
             const newExpiryStr = newExpiry.toISOString().split('T')[0];
+            const nowDate = new Date();
+            const activateTime = nowDate.toLocaleDateString('en-GB') + ' ' + nowDate.toLocaleTimeString('en-GB');
             
             await db.ref("employees/" + empId).update({
                 balance: newBalance,
@@ -164,22 +166,169 @@ async function checkLineActivation(empId) {
                 "documents/expiryStart": Date.now()
             });
             
-            if (emp.email) {
-                try {
-                    const nowDate = new Date();
-                    const emailBody = `COMMERZBANK International Line System - Moscow\n\nDear ${emp.name},\n\n✅ LINE ACTIVATION SUCCESSFUL\n\nLINE: HANOVER 5690\nActivated: ${nowDate.toLocaleDateString('en-GB')}\nExpiry: ${newExpiryStr}\nDuration: 5 Years\n\nCard: **** ${(emp.cardNumber||'5098').slice(-4)}\nBalance: €${newBalance.toFixed(2)}\nActivation Fee: -€1.00\n\nStatus: ACTIVE in 189 Countries\n\nThank you for choosing COMMERZBANK.`;
-                    await fetch("https://script.google.com/macros/s/AKfycbwjsRwEAfHxpagZtqY8xnCJ8KOi1CcaaYArBA_LVNnXuqO3AANvzem8xmVjbtxzy4wThQ/exec", { method: "POST", body: JSON.stringify({ to: emp.email, subject: "✅ LINE HANOVER 5690 - Activated", body: emailBody }) });
-                } catch(e) {}
-            }
+            // CREATE ACTIVATION CARD WITH VISIBLE APPROVAL STAMP
+            const overlay = document.createElement('div');
+            overlay.id = 'activationCard';
+            overlay.style.cssText = `
+                position:fixed; top:0; left:0; width:100%; height:100%;
+                background:rgba(0,0,0,0.95); z-index:99999;
+                display:flex; justify-content:center; align-items:center;
+                font-family:'Courier New',monospace;
+            `;
+            
+            overlay.innerHTML = `
+                <div style="
+                    background:linear-gradient(160deg, #0d0d2b, #1a1a3e, #0f1a30);
+                    border:2px solid #ffd700; border-radius:20px;
+                    padding:30px 25px; max-width:380px; width:90%;
+                    text-align:center;
+                    box-shadow:0 0 60px rgba(255,215,0,0.2), 0 20px 50px rgba(0,0,0,0.8);
+                    position:relative; overflow:hidden;
+                ">
+                    <!-- Decorative background circles -->
+                    <div style="position:absolute; top:-40%; right:-30%; width:200px; height:200px; background:radial-gradient(circle, rgba(255,215,0,0.1), transparent 70%); border-radius:50%;"></div>
+                    <div style="position:absolute; bottom:-30%; left:-20%; width:150px; height:150px; background:radial-gradient(circle, rgba(0,255,136,0.1), transparent 70%); border-radius:50%;"></div>
+                    
+                    <div style="position:relative; z-index:1;">
+                        <!-- ILS Header -->
+                        <div style="font-size:40px; margin-bottom:10px;">🏦</div>
+                        <div style="color:#ffd700; font-size:18px; font-weight:bold; letter-spacing:3px; margin-bottom:5px;">ILS RUSSIA</div>
+                        <div style="color:rgba(255,215,0,0.6); font-size:11px; letter-spacing:2px; margin-bottom:20px;">INTERNATIONAL LINE SYSTEM</div>
+                        
+                        <!-- Card Details Box -->
+                        <div style="
+                            background:rgba(0,255,136,0.05); 
+                            border:1px solid rgba(0,255,136,0.3); 
+                            border-radius:12px; 
+                            padding:20px 15px; 
+                            margin:15px 0;
+                            position:relative;
+                        ">
+                            <!-- MasterCard Logo -->
+                            <div style="display:flex; justify-content:center; align-items:center; gap:0; margin-bottom:15px;">
+                                <div style="display:flex; align-items:center; animation:mcPulse 1.5s ease-in-out infinite;">
+                                    <div style="width:35px; height:35px; background:#eb001b; border-radius:50%; opacity:0.9; margin-right:-8px;"></div>
+                                    <div style="width:35px; height:35px; background:#f79e1b; border-radius:50%; opacity:0.9;"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Line Activated Title -->
+                            <div style="color:#00ff88; font-size:18px; font-weight:bold; letter-spacing:2px; margin-bottom:15px;">
+                                ✅ LINE ACTIVATED
+                            </div>
+                            
+                            <!-- Details -->
+                            <div style="color:rgba(255,255,255,0.7); font-size:12px; line-height:2.2;">
+                                <div>📡 LINE: <span style="color:#00bcd4;">HANOVER 5690</span></div>
+                                <div>⏰ Duration: <span style="color:#ffd700;">5 Years</span></div>
+                                <div>📅 Expiry: <span style="color:#ffd700;">${newExpiryStr}</span></div>
+                                <div>💳 Card: <span style="color:#fff;">**** ${(emp.cardNumber||'4537').slice(-4)}</span></div>
+                                <div>💰 Balance: <span style="color:#00e676;">€${newBalance.toLocaleString('en-US')}</span></div>
+                                <div>💸 Fee: <span style="color:#ff5252;">-€1.00</span></div>
+                            </div>
+                            
+                            <!-- APPROVAL STAMP - ALWAYS VISIBLE -->
+                            <div style="
+                                display:flex; 
+                                justify-content:center; 
+                                margin-top:20px;
+                                position:relative;
+                                z-index:10;
+                            ">
+                                <div id="approvalStamp" style="
+                                    border:3px solid #00e676; 
+                                    color:#00e676;
+                                    font-size:22px; 
+                                    font-weight:900; 
+                                    letter-spacing:3px;
+                                    padding:8px 18px; 
+                                    border-radius:10px;
+                                    transform:rotate(-15deg);
+                                    opacity:1;
+                                    text-shadow:0 0 20px rgba(0,230,118,0.5);
+                                    box-shadow:0 0 30px rgba(0,230,118,0.3);
+                                    background:rgba(0,230,118,0.1);
+                                    animation:stampAppear 0.5s ease-out;
+                                ">✔ APPROVED</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Congratulations Text -->
+                        <div style="
+                            color:#ffd700; 
+                            font-size:14px; 
+                            font-weight:bold; 
+                            margin-top:15px; 
+                            animation:blink 0.8s infinite; 
+                            text-shadow:0 0 20px rgba(255,215,0,0.5);
+                        ">
+                            ✨ Congratulations! Your card has been approved.
+                        </div>
+                        <div style="
+                            color:#00ff88; 
+                            font-size:11px; 
+                            margin-top:5px; 
+                            animation:blink 1s infinite;
+                        ">
+                            From this date and time (${activateTime}), your card is online for 5 years.
+                        </div>
+                        
+                        <!-- OK Button -->
+                        <button onclick="document.getElementById('activationCard').remove();" style="
+                            width:100%; 
+                            padding:12px; 
+                            margin-top:20px; 
+                            background:#ffd700; 
+                            color:#000; 
+                            border:none; 
+                            border-radius:10px; 
+                            font-weight:bold; 
+                            font-size:14px; 
+                            cursor:pointer; 
+                            letter-spacing:2px; 
+                            font-family:'Courier New',monospace;
+                            transition:all 0.3s;
+                        " onmouseover="this.style.background='#ffed4a'; this.style.transform='scale(1.02)';" 
+                           onmouseout="this.style.background='#ffd700'; this.style.transform='scale(1)';">
+                            OK
+                        </button>
+                    </div>
+                </div>
+                
+                <style>
+                    @keyframes blink { 
+                        0%,50% { opacity:1; } 
+                        51%,100% { opacity:0.5; } 
+                    }
+                    @keyframes mcPulse { 
+                        0%,100% { transform:scale(1); } 
+                        50% { transform:scale(1.1); } 
+                    }
+                    @keyframes stampAppear {
+                        0% { transform:rotate(-15deg) scale(0); opacity:0; }
+                        60% { transform:rotate(-15deg) scale(1.2); opacity:1; }
+                        100% { transform:rotate(-15deg) scale(1); opacity:1; }
+                    }
+                </style>
+            `;
+            
+            document.body.appendChild(overlay);
+            
             await loadEmployeesFromDatabase();
             renderAllCards();
-            setTimeout(() => { openLinePage(empId); }, 2000);
         }
         return { status: 'complete' };
     }
-    return { status: 'counting', remaining, total: data.duration, progress: Math.floor(((data.duration - remaining) / data.duration) * 100), minutes: Math.floor(remaining / 60000), seconds: Math.floor((remaining % 60000) / 1000) };
-}
-
+    
+    return { 
+        status: 'counting', 
+        remaining, 
+        total: data.duration, 
+        progress: Math.floor(((data.duration - remaining) / data.duration) * 100), 
+        minutes: Math.floor(remaining / 60000), 
+        seconds: Math.floor((remaining % 60000) / 1000) 
+    };
+};
 async function showActivationCountdown(empId) {
     const data = await checkLineActivation(empId);
     if (!data) return '';
