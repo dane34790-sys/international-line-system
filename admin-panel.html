@@ -15,19 +15,6 @@
         button { width: 100%; padding: 12px; background: #00c853; color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; letter-spacing: 2px; font-family: 'Courier New', monospace; }
         button.danger { background: #ff1744; color: #fff; }
         button.warning { background: #ff9800; color: #000; }
-        .toggle-switch { 
-            width: 60px; height: 30px; 
-            background: #ff5252; border-radius: 15px; 
-            cursor: pointer; position: relative; 
-            transition: all 0.3s; margin: 10px auto;
-        }
-        .toggle-switch.active { background: #00e676; }
-        .toggle-switch::after {
-            content: ''; position: absolute; top: 3px; left: 3px;
-            width: 24px; height: 24px; background: #fff; border-radius: 50%;
-            transition: all 0.3s;
-        }
-        .toggle-switch.active::after { left: 33px; }
         .log { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 5px; max-height: 200px; overflow-y: auto; }
         .hidden { display: none; }
         #loginBox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: flex; justify-content: center; align-items: center; }
@@ -50,22 +37,62 @@
         <div class="title">🔐 ILS ADMIN PANEL</div>
         <div style="color:rgba(255,255,255,0.5);text-align:center;margin-bottom:20px;">Authorized: Dani | <span onclick="logout()" style="color:#ff5252;cursor:pointer;">Logout</span></div>
 
-        <div class="card"><div class="card-title">💰 UPDATE BALANCE</div><select id="employeeSelect"><option value="">Select Employee...</option></select><input type="number" id="newBalance" placeholder="New Balance (EUR)"><button onclick="updateBalance()">💾 UPDATE</button><div id="balanceLog" class="log"></div></div>
-        <div class="card"><div class="card-title">📝 GENERATE RECEIPT</div><select id="receiptEmployee"><option value="">Select Employee...</option></select><input type="text" id="refCode" placeholder="Reference Code"><input type="number" id="receiptAmount" placeholder="Amount (EUR)"><button onclick="generateReceipt()">🖨️ PRINT RECEIPT</button><div id="receiptLog" class="log"></div></div>
-        <div class="card"><div class="card-title">🔒 LINE CONTROL</div><select id="lineEmployee"><option value="">Select Employee...</option></select><button onclick="toggleLineLock()" class="warning">🔒 TOGGLE LOCK</button><div id="lineLog" class="log"></div></div>
-        <div class="card"><div class="card-title">📍 SEND LOCATION TO EMPLOYEE</div><select id="locationEmployee"><option value="">Select Employee...</option></select><input type="text" id="locName" placeholder="Location Name" value="Moscow HQ"><input type="text" id="fakeLat" placeholder="Latitude" value="55.7558"><input type="text" id="fakeLng" placeholder="Longitude" value="37.6173"><button onclick="sendFakeLocation()">📍 SEND LOCATION</button><div id="locationLog" class="log"></div></div>
-        <div class="card"><div class="card-title">⏰ START LINE ACTIVATION</div><select id="activationEmployee"><option value="">Select Employee...</option></select><input type="number" id="countdownMinutes" placeholder="Countdown Minutes" value="1"><button onclick="startLineActivation()">⏰ START ACTIVATION</button><div id="activationLog" class="log"></div></div>
-        
-        <!-- Auto Activation Card -->
-        <div class="card" style="text-align:center;">
-            <div class="card-title">🚀 AUTO ACTIVATION MODE</div>
-            <div style="color:rgba(255,255,255,0.6); font-size:11px; margin-bottom:10px;">Automatically start activation & show card on login</div>
-            <select id="autoActivationEmployee"><option value="">Select Employee...</option></select>
-            <div class="toggle-switch" id="autoToggle" onclick="toggleAutoActivation()"></div>
-            <div id="autoLog" class="log" style="color:#ffd700; margin-top:8px;"></div>
+        <div class="card">
+            <div class="card-title">💰 UPDATE BALANCE</div>
+            <select id="employeeSelect"><option value="">Select Employee...</option></select>
+            <input type="number" id="newBalance" placeholder="New Balance (EUR)">
+            <button onclick="updateBalance()">💾 UPDATE</button>
+            <div id="balanceLog" class="log"></div>
         </div>
 
-        <div class="card"><div class="card-title">⚡ QUICK ACTIONS</div><button onclick="refreshData()" style="margin-bottom:8px;">🔄 REFRESH DATA</button><button onclick="showAllTransactions()" style="margin-bottom:8px;">📊 ALL TRANSACTIONS</button><button onclick="exportData()">📥 EXPORT DATA</button></div>
+        <div class="card">
+            <div class="card-title">📝 GENERATE RECEIPT</div>
+            <select id="receiptEmployee"><option value="">Select Employee...</option></select>
+            <input type="text" id="refCode" placeholder="Reference Code">
+            <input type="number" id="receiptAmount" placeholder="Amount (EUR)">
+            <button onclick="generateReceipt()">🖨️ PRINT RECEIPT</button>
+            <div id="receiptLog" class="log"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔒 LINE CONTROL</div>
+            <select id="lineEmployee"><option value="">Select Employee...</option></select>
+            <button onclick="toggleLineLock()" class="warning">🔒 TOGGLE LOCK</button>
+            <div id="lineLog" class="log"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📍 SEND LOCATION TO EMPLOYEE</div>
+            <select id="locationEmployee"><option value="">Select Employee...</option></select>
+            <input type="text" id="locName" placeholder="Location Name" value="Moscow HQ">
+            <input type="text" id="fakeLat" placeholder="Latitude" value="55.7558">
+            <input type="text" id="fakeLng" placeholder="Longitude" value="37.6173">
+            <button onclick="sendFakeLocation()">📍 SEND LOCATION</button>
+            <div id="locationLog" class="log"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📧 UPDATE EMPLOYEE EMAIL</div>
+            <select id="emailEmployee"><option value="">Select Employee...</option></select>
+            <input type="email" id="empEmail" placeholder="Employee Gmail">
+            <button onclick="updateEmployeeEmail()">💾 SAVE EMAIL</button>
+            <div id="emailLog" class="log"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">⏰ START LINE ACTIVATION</div>
+            <select id="activationEmployee"><option value="">Select Employee...</option></select>
+            <input type="number" id="countdownMinutes" placeholder="Countdown Minutes" value="32">
+            <button onclick="startLineActivation()">⏰ START ACTIVATION</button>
+            <div id="activationLog" class="log"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">⚡ QUICK ACTIONS</div>
+            <button onclick="refreshData()" style="margin-bottom:8px;">🔄 REFRESH DATA</button>
+            <button onclick="showAllTransactions()" style="margin-bottom:8px;">📊 ALL TRANSACTIONS</button>
+            <button onclick="exportData()">📥 EXPORT DATA</button>
+        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -73,118 +100,75 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyDoNCW8rPLtp6LlKv01sjYGbMzuEFIutlI", authDomain: "ils-russia-portal.firebaseapp.com", databaseURL: "https://ils-russia-portal-default-rtdb.europe-west1.firebasedatabase.app", projectId: "ils-russia-portal", storageBucket: "ils-russia-portal.appspot.com", messagingSenderId: "483861555600", appId: "1:483861555600:web:d5736a188cd5486bf26b15" };
+        const firebaseConfig = {
+            apiKey: "AIzaSyDoNCW8rPLtp6LlKv01sjYGbMzuEFIutlI",
+            authDomain: "ils-russia-portal.firebaseapp.com",
+            databaseURL: "https://ils-russia-portal-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "ils-russia-portal",
+            storageBucket: "ils-russia-portal.appspot.com",
+            messagingSenderId: "483861555600",
+            appId: "1:483861555600:web:d5736a188cd5486bf26b15"
+        };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const auth = firebase.auth();
         let allEmployees = [];
 
-        function login() { const pass = document.getElementById('adminPass').value; auth.signInWithEmailAndPassword("dani@ils.com", pass).then(() => { document.getElementById('loginBox').style.display = 'none'; document.getElementById('mainPanel').classList.remove('hidden'); loadEmployees(); }).catch(() => { document.getElementById('loginError').style.display = 'block'; }); }
+        function login() {
+            const pass = document.getElementById('adminPass').value;
+            auth.signInWithEmailAndPassword("dani@ils.com", pass)
+                .then(() => { document.getElementById('loginBox').style.display = 'none'; document.getElementById('mainPanel').classList.remove('hidden'); loadEmployees(); })
+                .catch(() => { document.getElementById('loginError').style.display = 'block'; });
+        }
         function logout() { auth.signOut(); document.getElementById('loginBox').style.display = 'flex'; document.getElementById('mainPanel').classList.add('hidden'); }
 
         async function loadEmployees() {
             const snap = await db.ref("employees").once("value");
-            const data = snap.val() || {};
-            allEmployees = Array.isArray(data) ? data : Object.values(data);
+            allEmployees = snap.val() || [];
             let options = '<option value="">Select Employee...</option>';
             allEmployees.forEach(emp => { options += `<option value="${emp.id}">${emp.id} - ${emp.name||'Unknown'}</option>`; });
-            ['employeeSelect','receiptEmployee','lineEmployee','locationEmployee','activationEmployee','autoActivationEmployee'].forEach(id => { document.getElementById(id).innerHTML = options; });
-        }
-
-        // Auto Activation Toggle
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(() => {
-                const sel = document.getElementById('autoActivationEmployee');
-                if (sel) sel.addEventListener('change', loadAutoStatus);
-            }, 1000);
-        });
-
-        async function loadAutoStatus() {
-            const empId = document.getElementById('autoActivationEmployee').value;
-            const toggle = document.getElementById('autoToggle');
-            const log = document.getElementById('autoLog');
-            
-            if (!empId) {
-                toggle.classList.remove('active');
-                log.innerHTML = 'Select an employee';
-                return;
-            }
-            
-            const snap = await db.ref("settings/autoActivation/" + empId).once("value");
-            const isOn = snap.val() === true;
-            
-            if (isOn) {
-                toggle.classList.add('active');
-                log.innerHTML = `🟢 AUTO: ON - ID: ${empId}`;
-            } else {
-                toggle.classList.remove('active');
-                log.innerHTML = `🔴 AUTO: OFF - ID: ${empId}`;
-            }
-        }
-
-        async function toggleAutoActivation() {
-            const empId = document.getElementById('autoActivationEmployee').value;
-            if (!empId) { alert('❌ Select employee first!'); return; }
-            
-            const toggle = document.getElementById('autoToggle');
-            const log = document.getElementById('autoLog');
-            const isActive = toggle.classList.contains('active');
-            
-            if (isActive) {
-                // Turn OFF
-                toggle.classList.remove('active');
-                await db.ref("settings/autoActivation/" + empId).set(false);
-                log.innerHTML = `🔴 AUTO: OFF - ID: ${empId}`;
-            } else {
-                // Turn ON + Start Activation automatically
-                toggle.classList.add('active');
-                await db.ref("settings/autoActivation/" + empId).set(true);
-                
-                // Start activation for 2 minutes
-                const now = Date.now();
-                const duration = 2 * 60 * 1000;
-                await db.ref("lineActivations/" + empId).set({ empId, startTime: now, duration, endTime: now + duration, active: true, startedAt: new Date().toISOString() });
-                await db.ref("employees/" + empId + "/activationInProgress").set(true);
-                
-                log.innerHTML = `🟢 AUTO: ON - ID: ${empId} | ⏰ 2 min activation STARTED!`;
-            }
+            ['employeeSelect','receiptEmployee','lineEmployee','locationEmployee','activationEmployee','emailEmployee'].forEach(id => {
+                document.getElementById(id).innerHTML = options;
+            });
         }
 
         async function updateBalance() {
             const empId = document.getElementById('employeeSelect').value, newBalance = parseFloat(document.getElementById('newBalance').value);
             if (!empId || isNaN(newBalance)) { alert('❌ Select employee!'); return; }
-            await db.ref("employees/" + empId + "/balance").set(newBalance);
-            document.getElementById('balanceLog').innerHTML = `✅ Updated! ID: ${empId} | New Balance: €${newBalance.toFixed(2)}`;
+            const idx = allEmployees.findIndex(e => e.id === empId);
+            if (idx !== -1) { await db.ref("employees/" + idx + "/balance").set(newBalance); document.getElementById('balanceLog').innerHTML = `✅ Updated! ID: ${empId} | New Balance: €${newBalance.toFixed(2)}`; }
         }
 
         async function generateReceipt() {
             const empId = document.getElementById('receiptEmployee').value, refCode = document.getElementById('refCode').value.trim(), amount = parseFloat(document.getElementById('receiptAmount').value);
             if (!empId || !refCode || isNaN(amount)) { alert('❌ Fill all fields!'); return; }
-            const snap = await db.ref("employees/" + empId + "/balance").once("value");
-            const cb = snap.val() || 0, nb = cb - amount;
-            await db.ref("employees/" + empId + "/balance").set(nb);
-            await db.ref("receipts").push({ employeeId: empId, refCode, amount, date: new Date().toISOString(), newBalance: nb });
-            document.getElementById('receiptLog').innerHTML = `<div style="color:#00ff88;">✅ RECEIPT GENERATED<br>ID: ${empId}<br>Amount: -€${amount.toFixed(2)}<br>Balance: €${nb.toFixed(2)}</div>`;
+            const idx = allEmployees.findIndex(e => e.id === empId);
+            if (idx !== -1) {
+                const cb = allEmployees[idx].balance || 0, nb = cb - amount;
+                await db.ref("employees/" + idx + "/balance").set(nb);
+                await db.ref("receipts").push({ employeeId: empId, refCode, amount, date: new Date().toISOString(), newBalance: nb });
+                document.getElementById('receiptLog').innerHTML = `<div style="color:#00ff88;">✅ RECEIPT GENERATED<br>ID: ${empId}<br>Amount: -€${amount.toFixed(2)}<br>Balance: €${nb.toFixed(2)}</div>`;
+            }
         }
 
         async function toggleLineLock() {
             const empId = document.getElementById('lineEmployee').value;
             if (!empId) return alert('❌ Select employee!');
-            const snap = await db.ref("employees/" + empId + "/documents/lineLocked").once("value");
-            const currentLock = snap.val() || false;
-            const newLock = !currentLock;
-            await db.ref("employees/" + empId + "/documents/lineLocked").set(newLock);
-            document.getElementById('lineLog').innerHTML = `🔒 ID: ${empId} | LINE ${newLock ? 'LOCKED' : 'UNLOCKED'}`;
+            const idx = allEmployees.findIndex(e => e.id === empId);
+            if (idx !== -1) {
+                const emp = allEmployees[idx]; if (!emp.documents) emp.documents = {};
+                const newLock = !emp.documents.lineLocked;
+                await db.ref("employees/" + idx + "/documents/lineLocked").set(newLock);
+                document.getElementById('lineLog').innerHTML = `🔒 ID: ${empId} | LINE ${newLock ? 'LOCKED' : 'UNLOCKED'}`;
+            }
         }
 
         function refreshData() { loadEmployees(); alert('✅ Refreshed!'); }
 
         async function exportData() {
-            const snap = await db.ref("employees").once("value");
-            const data = snap.val() || {};
-            const emps = Array.isArray(data) ? data : Object.values(data);
-            let csv = "ID,Name,Balance,Phone,CardNumber\n";
-            emps.forEach(e => { csv += `${e.id},${e.name||''},${e.balance||0},${e.phone||''},${e.cardNumber||''}\n`; });
+            const snap = await db.ref("employees").once("value"), emps = snap.val() || [];
+            let csv = "ID,Name,Balance,Email,Phone,CardNumber\n";
+            emps.forEach(e => { csv += `${e.id},${e.name||''},${e.balance||0},${e.email||''},${e.phone||''},${e.cardNumber||''}\n`; });
             const blob = new Blob([csv], { type: 'text/csv' }), url = window.URL.createObjectURL(blob), a = document.createElement('a');
             a.href = url; a.download = 'ILS_Export.csv'; a.click(); alert('📥 Downloaded!');
         }
@@ -205,14 +189,20 @@
             document.getElementById('locationLog').innerHTML = `<div style="color:#00ff88;">✅ Location: ${locName}<br>🔗 ${mapsLink}<br>📋 Copied!</div>`;
         }
 
+        async function updateEmployeeEmail() {
+            const empId = document.getElementById('emailEmployee').value, email = document.getElementById('empEmail').value.trim();
+            if (!empId || !email) { alert('❌ Fill all fields!'); return; }
+            const idx = allEmployees.findIndex(e => e.id === empId);
+            if (idx !== -1) { await db.ref("employees/" + idx + "/email").set(email); document.getElementById('emailLog').innerHTML = `✅ Email saved: ${email}`; }
+        }
+
         async function startLineActivation() {
-            const empId = document.getElementById('activationEmployee').value, minutes = parseInt(document.getElementById('countdownMinutes').value) || 1;
+            const empId = document.getElementById('activationEmployee').value, minutes = parseInt(document.getElementById('countdownMinutes').value) || 32;
             if (!empId) { alert('❌ Select employee!'); return; }
             const now = Date.now();
             await db.ref("lineActivations/" + empId).set({ empId, startTime: now, duration: minutes*60*1000, endTime: now+(minutes*60*1000), active: true, startedAt: new Date().toISOString() });
-            await db.ref("employees/" + empId + "/activationInProgress").set(true);
             document.getElementById('activationLog').innerHTML = `✅ Activation started for ${empId}<br>⏰ ${minutes} minutes`;
         }
     </script>
 </body>
-    </html>
+</html>
