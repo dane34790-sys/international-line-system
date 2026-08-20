@@ -12,2024 +12,360 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+window.db = firebase.database();
+const db = window.db;
 const auth = firebase.auth();
 
-async function saveEmployeesToDatabase() {
-  await db.ref("employees").set(employees);
-}
-
+// ==========================================
+// DATABASE
+// ==========================================
 async function loadEmployeesFromDatabase() {
   const snapshot = await db.ref("employees").once("value");
   if (snapshot.exists()) {
-    const data = snapshot.val();
-    if (Array.isArray(data)) {
-      employees = data;
-    } else {
-      employees = Object.values(data);
-    }
+    employees = Object.values(snapshot.val());
   } else {
     employees = [];
   }
 }
 
 // ==========================================
-// بقیه کد اصلی تو...
+// GLOBAL
 // ==========================================
 let currentUser = null;
-// ==========================================
-// AUTHENTICATION & OTP
-// ==========================================
 let currentOTP = '';
 let otpTimerInterval = null;
 let otpSecondsLeft = 30;
-
-// ========== CUSTOM ALERT (Glass) ==========
-function showCustomAlert(message, title = 'INTERNATIONAL LINE SYSTEM') {
-  document.getElementById('alertTitle').textContent = title;
-  document.getElementById('alertMessage').textContent = message;
-  document.getElementById('customAlertOverlay').style.display = 'flex';
-}
-
-function closeCustomAlert() {
-  document.getElementById('customAlertOverlay').style.display = 'none';
-}
-
-let splashChecked = false;
-
-async function showSplashScreen() {
-    if (window.SKIP_SPLASH) return;
-
-    return new Promise((resolve) => {
-        if (splashChecked) {
-            startSplashAnimation(resolve);
-            return;
-        }
-        
-        splashChecked = true;
-        setTimeout(() => {
-            startSplashAnimation(resolve);
-        }, 500);
-    });
-}
-
-function startSplashAnimation(resolve) {
-    const messages = [
-        "🔹 Initializing System...",
-        "🔹 Loading Modules...",
-        "🔹 Connecting to Database...",
-        "🔹 Server Status: ONLINE",
-        "🔹 Encryption: ACTIVE",
-        "🔹 International Line System Russia",
-        "🔹 System Ready!"
-    ];
-
-    let msgIndex = 0;
-    let charIndex = 0;
-    let progress = 0;
-
-    document.getElementById("app").innerHTML = `
-        <div class="splash-screen" style="
-            display:flex;
-            flex-direction:column;
-            justify-content:center;
-            align-items:center;
-            height:100vh;
-            width:100vw;
-            background:#000000;
-            color:#00ff88;
-            font-family:'Courier New', monospace;
-            padding:20px;
-            box-sizing:border-box;
-            position:fixed;
-            top:0;
-            left:0;
-            z-index:99999;
-        ">
-            <div style="display:flex; gap:3px; margin-bottom:3px; justify-content:center; flex-wrap:wrap; max-width:350px;">
-                ${["I","N","T","E","R","N","A","T","I","O","N","A","L"].map((char, i) => `
-                    <div id="charBox_${i}" style="width:22px; height:30px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:bold; background:rgba(0,255,136,0.03); border:1px solid rgba(0,255,136,0.08); border-radius:3px; color:rgba(0,255,136,0.08); transition:all 0.4s ease; font-family:'Courier New', monospace;">${char}</div>
-                `).join('')}
-            </div>
-            <div style="display:flex; gap:3px; margin-bottom:3px; justify-content:center; flex-wrap:wrap;">
-                ${["L","I","N","E"].map((char, i) => `
-                    <div id="charBox_${i + 13}" style="width:22px; height:30px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:bold; background:rgba(0,255,136,0.03); border:1px solid rgba(0,255,136,0.08); border-radius:3px; color:rgba(0,255,136,0.08); transition:all 0.4s ease; font-family:'Courier New', monospace;">${char}</div>
-                `).join('')}
-            </div>
-            <div style="display:flex; gap:3px; margin-bottom:3px; justify-content:center; flex-wrap:wrap;">
-                ${["S","Y","S","T","E","M"].map((char, i) => `
-                    <div id="charBox_${i + 17}" style="width:22px; height:30px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:bold; background:rgba(0,255,136,0.03); border:1px solid rgba(0,255,136,0.08); border-radius:3px; color:rgba(0,255,136,0.08); transition:all 0.4s ease; font-family:'Courier New', monospace;">${char}</div>
-                `).join('')}
-            </div>
-            <div style="display:flex; gap:3px; margin-bottom:25px; justify-content:center; flex-wrap:wrap;">
-                ${["R","U","S","S","I","A"].map((char, i) => `
-                    <div id="charBox_${i + 23}" style="width:22px; height:30px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:bold; background:rgba(0,255,136,0.03); border:1px solid rgba(0,255,136,0.08); border-radius:3px; color:rgba(0,255,136,0.08); transition:all 0.4s ease; font-family:'Courier New', monospace;">${char}</div>
-                `).join('')}
-            </div>
-            <div style="font-size:9px; color:rgba(0,255,136,0.3); margin-bottom:20px; letter-spacing:2px;">INTERNATIONAL LINE COMPANY</div>
-            <div style="font-size:10px; color:rgba(0,255,136,0.2); margin-bottom:20px; letter-spacing:3px;">─── SYSTEM INITIALIZATION ───</div>
-            <div id="typingText" style="font-size:13px; min-height:150px; color:#00ff88; text-shadow:0 0 20px rgba(0,255,136,0.15); font-family:'Courier New', monospace; text-align:left; letter-spacing:1px; margin-bottom:20px; line-height:1.8; width:85%; max-width:350px;"><span id="cursor" style="display:inline-block; width:2px; height:16px; background:#00ff88; animation: blink 0.8s infinite;"></span></div>
-            <div style="width:60%; max-width:300px; height:3px; background:rgba(0,255,136,0.06); border-radius:2px; overflow:hidden; border:1px solid rgba(0,255,136,0.03);"><div id="progressBar" style="width:0%; height:100%; background:linear-gradient(90deg, #00ff88, #00c853, #00ff88); background-size:200% 100%; animation: progressGlow 1.5s ease-in-out infinite; border-radius:2px; transition:width 0.3s;"></div></div>
-            <div style="margin-top:12px; font-size:10px; color:rgba(0,255,136,0.35); letter-spacing:2px;"><span id="progressText">0%</span></div>
-        </div>
-        <style>
-            @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
-            @keyframes progressGlow { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-            .char-active { background:rgba(0,255,136,0.2) !important; border-color:#00ff88 !important; color:#00ff88 !important; box-shadow:0 0 25px rgba(0,255,136,0.25) !important; transform:scale(1.05); }
-        </style>
-    `;
-
-    const totalChars = 29;
-    let currentCharIndex = 0;
-    const typingElement = document.getElementById('typingText');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-
-    function lightUpNextChar() {
-        if (currentCharIndex < totalChars) {
-            const box = document.getElementById(`charBox_${currentCharIndex}`);
-            if (box) box.classList.add('char-active');
-            currentCharIndex++;
-            setTimeout(lightUpNextChar, 150);
-        }
-    }
-    setTimeout(lightUpNextChar, 300);
-
-    function typeMessage() {
-        if (msgIndex >= messages.length) {
-            setTimeout(() => { resolve(); }, 2000);
-            return;
-        }
-        const fullText = messages[msgIndex];
-        const displayText = fullText.substring(0, charIndex);
-        let fullDisplay = '';
-        for (let i = 0; i < msgIndex; i++) fullDisplay += messages[i] + '\n';
-        fullDisplay += displayText;
-        typingElement.innerHTML = `${fullDisplay}<span id="cursor" style="display:inline-block; width:2px; height:16px; background:#00ff88; animation: blink 0.8s infinite;"></span>`;
-        progress = (msgIndex / messages.length) * 100 + (charIndex / fullText.length) * (100 / messages.length);
-        progressBar.style.width = Math.min(progress, 100) + "%";
-        progressText.textContent = Math.floor(Math.min(progress, 100)) + "%";
-        charIndex++;
-        if (charIndex <= fullText.length) {
-            setTimeout(typeMessage, 70);
-        } else {
-            msgIndex++;
-            charIndex = 0;
-            setTimeout(typeMessage, 400);
-        }
-    }
-    setTimeout(typeMessage, 300);
-}
-
-// جایگزین خودکار برای alert های قبلی
-window.alert = function(msg) {
-  showCustomAlert(msg);
-};
-
-// ========== LOGIN ==========
-async function handleLogin() {
-  if (!navigator.onLine) {
-    showCustomAlert('⚠️ No internet connection', 'CONNECTION ERROR');
-    return;
-  }
-  
-  const id = document.getElementById('loginId').value.trim();
-  const pass = document.getElementById('loginPassword').value.trim();
-  const error = document.getElementById('loginError');
-  
-  if (!id || !pass) {
-    error.style.display = 'block';
-    return;
-  }
-  
-  // ادمین
-  if (id === 'dani' && pass === '19831983') {
-    currentMode = 'admin';
-    window.isAdmin = true;
-    document.getElementById('loginOverlay').style.display = 'none';
-    showOTPOverlay();
-    return;
-  }
-  
-  try {
-    // چک از Database
-    const snap = await db.ref("employees").once("value");
-    const list = snap.val();
-    let emp = null;
-    
-    if (Array.isArray(list)) {
-      emp = list.find(e => e && e.id === id);
-    } else {
-      emp = Object.values(list).find(e => e && e.id === id);
-    }
-    
-    if (!emp) {
-      error.style.display = 'block';
-      return;
-    }
-    
-    if (emp.password && emp.password !== pass) {
-      error.style.display = 'block';
-      return;
-    }
-    
-    currentMode = 'employee';
-    window.isAdmin = false;
-    currentUser = { type: 'employee', emp: emp };
-    
-    document.getElementById('loginOverlay').style.display = 'none';
-    showOTPOverlay();
-    
-  } catch(e) {
-    console.error('Login error:', e);
-    error.style.display = 'block';
-  }
-}
-// ========== OTP ==========
-function showOTPOverlay() {
-  document.getElementById('otpOverlay').style.display = 'flex';
-  generateOTP();
-  startOTPTimer();
-  for (let i = 1; i <= 6; i++) {
-    document.getElementById('otp' + i).value = '';
-  }
-  document.getElementById('otp1').focus();
-  document.getElementById('otpError').style.display = 'none';
-}
-
-function generateOTP() {
-  currentOTP = String(Math.floor(100000 + Math.random() * 900000));
-  
-  const notif = document.getElementById('otpNotification');
-  const notifCode = document.getElementById('otpNotificationCode');
-  notifCode.textContent = currentOTP;
-  notif.style.display = 'block';
-  
-  setTimeout(() => {
-    notif.classList.add('show');
-  }, 100);
-  
-  setTimeout(() => {
-    notif.classList.remove('show');
-    setTimeout(() => {
-      notif.style.display = 'none';
-    }, 600);
-  }, 5000);
-}
-
-function verifyOTP() {
-  if (!navigator.onLine) {
-    showCustomAlert('⚠️ No internet connection', 'CONNECTION ERROR');
-    return;
-  }
-  
-  let entered = '';
-  for (let i = 1; i <= 6; i++) {
-    entered += document.getElementById('otp' + i).value;
-  }
-
-  if (entered === currentOTP) {
-    document.getElementById('otpOverlay').style.display = 'none';
-    document.getElementById('otpNotification').style.display = 'none';
-    clearInterval(otpTimerInterval);
-    
-    showLoadingOverlay();
-    
-    setTimeout(() => {
-      hideLoadingOverlay();
-      showWelcomeOverlay();
-      
-      setTimeout(() => {
-        hideWelcomeOverlay();
-        
-        if (currentMode === 'admin') {
-          window.isAdmin = true;
-          document.getElementById('mainApp').style.display = 'flex';
-          switchMode('admin');
-        } else {
-          window.isAdmin = false;
-          document.getElementById('mainApp').style.display = 'flex';
-          switchMode('employee');
-        }
-        showCustomAlert('✅ Access Granted', 'INTERNATIONAL LINE SYSTEM');
-      }, 3000);
-      
-    }, 7000);
-    
-  } else {
-    document.getElementById('otpError').style.display = 'block';
-  }
-}
-function otpAutoFocus(input) {
-  if (input.value.length === 1 && input.nextElementSibling) {
-    input.nextElementSibling.focus();
-  }
-}
-
-function hideLoadingOverlay() {
-  document.getElementById('loadingOverlay').style.display = 'none';
-}
-
-function startOTPTimer() {
-  otpSecondsLeft = 30;
-  document.getElementById('resendBtn').disabled = true;
-  document.getElementById('otpTimer').textContent = '⏳ ' + otpSecondsLeft + 's';
-  clearInterval(otpTimerInterval);
-  otpTimerInterval = setInterval(() => {
-    otpSecondsLeft--;
-    document.getElementById('otpTimer').textContent = '⏳ ' + otpSecondsLeft + 's';
-    if (otpSecondsLeft <= 0) {
-      clearInterval(otpTimerInterval);
-      document.getElementById('resendBtn').disabled = false;
-      document.getElementById('otpTimer').textContent = '';
-    }
-  }, 1000);
-}
-
-function resendOTP() {
-  generateOTP();
-  startOTPTimer();
-  for (let i = 1; i <= 6; i++) {
-    document.getElementById('otp' + i).value = '';
-  }
-  document.getElementById('otp1').focus();
-  document.getElementById('otpError').style.display = 'none';
-}
-function otpPaste(e) {
-  e.preventDefault();
-  const paste = (e.clipboardData || window.clipboardData).getData('text');
-  const digits = paste.replace(/\D/g, '').slice(0, 6);
-  
-  for (let i = 0; i < 6; i++) {
-    const input = document.getElementById('otp' + (i + 1));
-    if (input) {
-      input.value = digits[i] || '';
-    }
-  }
-  
-  const lastFilled = digits.length;
-  if (lastFilled < 6) {
-    document.getElementById('otp' + (lastFilled + 1))?.focus();
-  } else {
-    document.getElementById('otp6')?.focus();
-  }
-}
-
-function otpKeyDown(e, input) {
-  if (e.key === 'Backspace' && input.value === '') {
-    if (input.previousElementSibling) {
-      input.previousElementSibling.focus();
-    }
-  }
-}
-
-function showWelcomeOverlay() {
-  const el = document.getElementById('welcomeOverlay');
-  el.style.display = 'flex';
-  el.style.backgroundImage = "url('images/auth-bg.png')";
-  el.style.backgroundSize = 'cover';
-  el.style.backgroundPosition = 'center';
-  el.style.backgroundRepeat = 'no-repeat';
-  el.style.backgroundColor = '#000';
-}
-
-function hideWelcomeOverlay() {
-  const el = document.getElementById('welcomeOverlay');
-  el.style.display = 'none';
-}
-
-// ========== Sample Data (with LINE fields) ==========
-let employees = [
-  {
-    id: "1001",
-    password: "123456",
-    passport: "A12345678",
-    name: "Ali Rezaei",
-    salary: 2500,
-    balance: 8900.50,
-    iban: "IR123456789012345678901234",
-    cardNumber: "6037-9911-2233-4455",
-    account: "1234567890",
-    expiry: "12/27",
-    ccv2: "123",
-    zip: "1234567890",
-    phone: "09121234567",
-    Bank: "",
-    birthDate: "1990/05/15",
-    documents: {
-      lineEnabled: true,
-      lineLocked: false,
-      lineCode: "Ty87jo329gfd441m",
-      expiryStart: Date.now(),
-      stopCPU: false,
-      stopRAM: false,
-      stopNetwork: false,
-      stopLogs: false,
-      stopMovement: false,
-      stopSignal: false,
-      stopSignalBar: false
-    }
-  },
-  {
-    id: "1002",
-    password: "123456",
-    passport: "B98765432",
-    name: "Maryam Ahmadi",
-    salary: 3200,
-    balance: 12500,
-    iban: "IR987654321098765432109876",
-    cardNumber: "5022-8877-6655-4433",
-    account: "9876543210",
-    expiry: "08/26",
-    ccv2: "456",
-    zip: "9876543210",
-    phone: "09129876543",
-    Bank: "",
-    birthDate: "1988/08/20",
-    documents: {
-      lineEnabled: false,
-      lineLocked: false,
-      lineCode: "Xy99kl456hjk789a",
-      expiryStart: Date.now(),
-      stopCPU: false,
-      stopRAM: false,
-      stopNetwork: false,
-      stopLogs: false,
-      stopMovement: false,
-      stopSignal: false,
-      stopSignalBar: false
-    }
-  }
-];
-
+let employees = [];
 let currentMode = 'employee';
 
-// ========== Helpers ==========
-function formatNumber(num) {
-  if (num === undefined || num === null) return '0';
-  return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function row(icon, label, value) {
-  return `
-    <div class="field">
-      <div class="field-label">${icon} ${label}</div>
-      <div class="field-value">${value}</div>
-    </div>
-  `;
-}
-
-function adminInput(icon, label, name, currentValue) {
-  return `
-    <div class="admin-field">
-      <label>${icon} ${label}</label>
-      <input class="admin-input" name="${name}" value="${currentValue}" />
-    </div>
-  `;
-}
-
-// ========== Actions ==========
-async function saveEmployee(empId) {
-  const card = document.getElementById(`admin-card-${empId}`);
-  if (!card) return;
-  const inputs = card.querySelectorAll('input');
-  const emp = employees.find(e => e.id == empId);
-  if (!emp) return;
-
-  inputs.forEach(input => {
-    const key = input.name;
-    let value = input.value;
-    if (key === 'salary' || key === 'balance') {
-      value = parseFloat(value) || 0;
-    }
-    if (key === 'password' && value.trim() === '') {
-      return;
-    }
-    emp[key] = value;
-  });
-
-  await saveEmployeesToDatabase();
-  showCustomAlert('✅ Information saved successfully');
+// ==========================================
+// EMPLOYEES CRUD
+// ==========================================
+async function addEmployee() {
+  const password = prompt("Enter password for new employee (min 6 chars):", "123456");
+  if (!password || password.length < 6) { alert("❌ Password must be at least 6 characters!"); return; }
+  const newId = Date.now().toString(), email = newId + "@ils.com";
+  try { await auth.createUserWithEmailAndPassword(email, password); } catch(e) { if (e.code === 'auth/email-already-in-use') { alert("⚠️ User already exists!"); return; } return; }
+  const newEmp = { id: newId, password, email, passport: "", name: "", salary: 0, balance: 0, iban: "", cardNumber: "", account: "", expiry: "", ccv2: "", zip: "", phone: "", Bank: "", birthDate: "", documents: { lineEnabled: false, lineLocked: false, lineCode: "--------------------", expiryStart: Date.now(), stopCPU: false, stopRAM: false, stopNetwork: false, stopLogs: false, stopMovement: false, stopSignal: false, stopSignalBar: false } };
+  await db.ref("employees/" + newId).set(newEmp);
+  await loadEmployeesFromDatabase();
+  renderAllCards();
+  alert("✅ Employee " + newId + " added!\nEmail: " + email + "\nPassword: " + password);
 }
 
 async function deleteEmployee(empId) {
-  if (!confirm('Are you sure you want to delete this employee?')) return;
-  employees = employees.filter(e => e.id != empId);
-  await saveEmployeesToDatabase();
-  renderAllCards();
-}
-
-async function toggleLine(empId) {
-  const emp = employees.find(e => e.id == empId);
-  if (!emp) return;
-  if (!emp.documents) emp.documents = {};
-  emp.documents.lineEnabled = !emp.documents.lineEnabled;
-  await saveEmployeesToDatabase();
-  renderAllCards();
-}
-
-async function addEmployee() {
-  const newId = Date.now().toString();
-  const defaultPassword = "123456";
-  const email = newId + "@ils.com";
-
-  try {
-    await auth.createUserWithEmailAndPassword(email, defaultPassword);
-    console.log("✅ Auth user created: " + email);
-  } catch(e) {
-    if (e.code === 'auth/email-already-in-use') {
-      alert("⚠️ User already exists!");
-      return;
-    }
-    console.error(e);
-  }
-
-  const newEmp = {
-    id: newId,
-    password: defaultPassword,
-    email: email,
-    passport: "",
-    name: "",
-    salary: 0,
-    balance: 500,
-    iban: "",
-    cardNumber: "",
-    account: "",
-    expiry: "",
-    ccv2: "",
-    zip: "",
-    phone: "",
-    Bank: "",
-    birthDate: "",
-    documents: {
-      lineEnabled: false,
-      lineLocked: false,
-      lineCode: "--------------------",
-      expiryStart: Date.now(),
-      stopCPU: false,
-      stopRAM: false,
-      stopNetwork: false,
-      stopLogs: false,
-      stopMovement: false,
-      stopSignal: false,
-      stopSignalBar: false
-    }
-  };
-
-  employees.push(newEmp);
-  await saveEmployeesToDatabase();
-  renderAllCards();
-  alert("✅ Employee " + newId + " added!\nEmail: " + email + "\n💰 Balance: €500");
-}
-
-// ========== LINE Page (Overlay) ==========
-function openLinePage(empId) {
-  const emp = employees.find(e => e.id == empId);
-  if (!emp) return;
-
-  if (!emp.documents) emp.documents = {};
-
-  const fields = ['stopCPU', 'stopRAM', 'stopNetwork', 'stopLogs', 'stopMovement', 'stopSignal', 'stopSignalBar'];
-  fields.forEach(f => {
-    if (emp.documents[f] === undefined) emp.documents[f] = false;
-  });
-
-  if (emp.documents.lineEnabled === undefined) emp.documents.lineEnabled = true;
-
-  const start = emp.documents.expiryStart || Date.now();
-  const end = start + (5 * 365 * 24 * 60 * 60 * 1000);
-
-  const fullName = emp.name || 'Unknown';
-  const birthDate = emp.birthDate || '0000/00/00';
-  const lineCode = emp.documents.lineCode || '';
-  const phone = emp.phone || 'Not Verified';
-  const cardNumber = emp.cardNumber || '';
-  const balance = emp.balance || 0;
-
-  const formattedBalance = Number(balance).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).replace(/\.00$/, '');
-
-  const overlay = document.createElement('div');
-  overlay.id = 'lineOverlay';
-  overlay.style.cssText = `
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #000; z-index: 9999; display: flex;
-    justify-content: center; align-items: center;
-    font-family: 'Courier New', monospace;
-  `;
-
-  overlay.innerHTML = `
-    <div id="verifyingLine" style="text-align: center; animation: fadeInScale 2s ease forwards;">
-      <div style="font-size: 45px; color: #00ff88; font-weight: bold; letter-spacing: 8px; text-shadow: 0 0 40px rgba(0,255,136,0.6);">
-        VERIFYING
-      </div>
-      <div style="font-size: 22px; color: #00bcd4; margin-top: 12px; letter-spacing: 10px; text-shadow: 0 0 20px rgba(0,188,212,0.4);">
-        LINE ACCESS
-      </div>
-      <div style="width: 120px; height: 2px; background: #00ff88; margin: 25px auto; box-shadow: 0 0 25px rgba(0,255,136,0.5);"></div>
-      <div style="color: rgba(0,255,136,0.5); font-size: 13px; letter-spacing: 4px;">
-        PLEASE WAIT
-      </div>
-    </div>
-    <style>
-      @keyframes fadeInScale {
-        0% { opacity: 0; transform: scale(0.7); }
-        25% { opacity: 1; transform: scale(1); }
-        75% { opacity: 1; transform: scale(1); }
-        100% { opacity: 0; transform: scale(1.3); }
-      }
-    </style>
-  `;
-
-  document.body.appendChild(overlay);
-
-  setTimeout(() => {
-    overlay.style.cssText = `
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: #000; z-index: 9999; overflow-y: auto; color: #00ff88;
-      font-family: 'Courier New', monospace;
-    `;
-
-    overlay.innerHTML = `
-      <div style="position:relative; padding:15px;">
-        <button onclick="closeLinePage()" style="
-          position: sticky; top: 10px; float: right; z-index: 10;
-          background:#ff1744; color:white; border:none; padding:10px 20px;
-          border-radius:8px; font-weight:bold; cursor:pointer;
-        ">← Back</button>
-        <div style="clear:both;"></div>
-
-        <div class="scan"></div>
-        <div class="access">ACCESS GRANTED</div>
-
-        <div style="position:relative; z-index:2; padding:15px 15px 0 15px;">
-          <div class="employee-info-card">
-            <div class="emp-card-header">
-              <div class="emp-avatar"><i class="fas fa-user-circle"></i></div>
-              <div class="emp-name-title">
-                <div class="emp-fullname"><span class="blink-dot"></span> ${fullName}</div>
-                <div class="emp-badge blink">● ONLINE</div>
-              </div>
-              <div style="font-size:20px; font-weight:700; color:#00ff88; text-shadow:0 0 20px rgba(0,255,136,0.2);">€${formattedBalance}</div>
-            </div>
-            <div class="emp-info-grid-vertical">
-              ${currentMode === 'admin' ? `
-                <div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-calendar-alt"></i> Birth Date</span><input id="birthDateEdit" type="text" value="${birthDate}" style="background:rgba(0,20,10,0.8);border:1px solid #00ff88;color:#00ff88;padding:8px;width:100%;font-family:monospace;border-radius:4px;"></div>
-                <div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-barcode"></i> Line Code</span><input id="lineCodeEditTop" type="text" value="${lineCode}" style="background:rgba(0,20,10,0.8);border:1px solid #00ff88;color:#00ff88;padding:8px;width:100%;font-family:monospace;letter-spacing:1px;border-radius:4px;"></div>
-                <div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-phone"></i> Phone</span><input id="phoneEdit" type="text" value="${phone}" style="background:rgba(0,20,10,0.8);border:1px solid #00ff88;color:#00ff88;padding:8px;width:100%;font-family:monospace;border-radius:4px;"></div>
-                <div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-credit-card"></i> Card Number</span><input id="cardEdit" type="text" value="${cardNumber}" style="background:rgba(0,20,10,0.8);border:1px solid #00ff88;color:#00ff88;padding:8px;width:100%;font-family:monospace;letter-spacing:2px;border-radius:4px;"></div>
-              ` : `
-                <div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-calendar-alt"></i> Birth Date</span><span class="emp-info-value">${birthDate}</span></div>
-                <div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-barcode"></i> Line Code</span><span class="emp-info-value" style="font-family:monospace;letter-spacing:1px;word-break:break-all;">${lineCode||'—'}</span></div>
-                <div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-phone"></i> Phone</span><span class="emp-info-value">${phone}</span></div>
-                <div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-credit-card"></i> Card Number</span><span class="emp-info-value" style="font-family:monospace;letter-spacing:2px;word-break:break-all;">${cardNumber||'—'}</span></div>
-              `}
-            </div>
-          </div>
-        </div>
-
-        <div class="dashboard" style="position:relative;z-index:1;padding-top:5px;">
-          <div class="cyber-panel"><div class="cyber-title"><span class="blink-dot"></span> SERVER LOAD</div>CPU<div class="bar"><div id="cpu" class="fill"></div></div><br>RAM<div class="bar"><div id="ram" class="fill"></div></div><br>NETWORK<div class="bar"><div id="network" class="fill"></div></div></div>
-          <div class="cyber-panel"><div class="cyber-title"><span class="blink-dot"></span> NETWORK ${emp.documents.Codeline||"Hanover 5690"}</div><div style="margin:6px 0;">ASIA: <span class="online-blink blink">${emp.documents.stopNetwork?"STOPPED":"ONLINE"}</span></div><div style="margin:6px 0;">EUROPE: <span class="online-blink blink">${emp.documents.stopNetwork?"STOPPED":"ONLINE"}</span></div><div style="margin:6px 0;">AMERICA: <span class="online-blink blink">${emp.documents.stopNetwork?"STOPPED":"ONLINE"}</span></div><div style="margin:6px 0;">AFRICA: <span class="online-blink blink">${emp.documents.stopNetwork?"STOPPED":"ONLINE"}</span></div></div>
-          <div class="cyber-panel">
-            <div style="font-size:12px;opacity:.7;" class="blink-label">START DATE</div><input id="startDate" type="text" ${currentMode==='admin'?"":"readonly"} value="${new Date(start).toISOString().split('T')[0]}" style="width:100%;margin-bottom:10px;background:${currentMode==='admin'?'#001f12':'transparent'};border:${currentMode==='admin'?'1px solid #00ff88':'none'};outline:none;color:#00ff88;padding:6px;">
-            <div style="font-size:12px;opacity:.7;" class="blink-label">END DATE</div><input id="endDate" type="text" ${currentMode==='admin'?"":"readonly"} value="${new Date(end).toISOString().split('T')[0]}" style="width:100%;margin-bottom:10px;background:${currentMode==='admin'?'#001f12':'transparent'};border:${currentMode==='admin'?'1px solid #00ff88':'none'};outline:none;color:#00ff88;padding:6px;">
-            <div style="font-size:12px;opacity:.7;" class="blink-label">LINE CODE</div><input id="lineCodeEdit" ${currentMode==='admin'?"":"disabled"} value="${emp.documents.lineCode||''}" style="width:100%;background:${currentMode==='admin'?'#001f12':'transparent'};border:${currentMode==='admin'?'1px solid #00ff88':'none'};outline:none;color:#00ff88;padding:6px;font-size:14px;margin-bottom:10px;">
-            ${currentMode==='admin'?`
-              <button onclick="saveLineData('${emp.id}')" style="width:100%;background:#009944;color:white;border:none;padding:10px;border-radius:8px;font-size:15px;font-weight:bold;margin-bottom:8px;cursor:pointer;">💾 SAVE</button>
-              <button onclick="toggleCPU('${emp.id}')" style="width:100%;background:#ff9800;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">⏸ CPU ${emp.documents.stopCPU?'RESUME':'STOP'}</button>
-              <button onclick="toggleRAM('${emp.id}')" style="width:100%;background:#ff5722;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">⏸ RAM ${emp.documents.stopRAM?'RESUME':'STOP'}</button>
-              <button onclick="toggleNetwork('${emp.id}')" style="width:100%;background:#9c27b0;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">⏸ NETWORK ${emp.documents.stopNetwork?'RESUME':'STOP'}</button>
-              <button onclick="toggleLogs('${emp.id}')" style="width:100%;background:#f44336;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">⏸ LOG ${emp.documents.stopLogs?'RESUME':'STOP'}</button>
-              <button onclick="toggleMovement('${emp.id}')" style="width:100%;background:#e91e63;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">⏸ MOVEMENT ${emp.documents.stopMovement?'RESUME':'STOP'}</button>
-              <button onclick="toggleSignal('${emp.id}')" style="width:100%;background:#3f51b5;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">📡 SIGNAL ${emp.documents.stopSignal?'RESUME':'STOP'}</button>
-              <button onclick="toggleSignalBar('${emp.id}')" style="width:100%;background:#e91e63;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">📊 SIGNAL BAR ${emp.documents.stopSignalBar?'RESUME':'STOP'}</button>
-              <button onclick="closeLinePage()" style="width:100%;background:#333;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">🔙 BACK</button>
-            `:`
-              <div class="cyber-panel mini-monitor"><div class="cyber-title"><span class="blink-dot"></span> EMPLOYEE STATUS</div><div class="status-line">ACCESS <span style="color:#00ff88;">GRANTED</span></div><div class="status-line">SECURITY <span style="color:#00ff88;" class="blink">ACTIVE</span></div><div class="status-line">SESSION <span id="sessionTime">00:00:00</span></div><div class="status-line">SIGNAL <span id="signalValue">100%</span></div><div class="signal-bar"><div id="signalFill"></div></div></div>
-              <div class="cyber-panel system-health" style="margin-top:10px;padding:8px;"><div class="cyber-title" style="font-size:11px;text-align:center;margin-bottom:4px;"><span class="blink-dot"></span> 🛰️ RADAR SCAN</div><div style="display:flex;justify-content:center;align-items:center;flex-direction:column;"><canvas id="radarCanvas" width="130" height="130" style="background:transparent;max-width:100%;"></canvas><div style="display:flex;justify-content:space-around;width:100%;margin-top:2px;font-size:8px;flex-wrap:wrap;gap:2px;"><span>TARGETS: <span id="targetCount" style="color:#00ff88;">12</span></span><span>SIGNAL: <span id="signalPower" style="color:#00ff88;">94%</span></span><span>STATUS: <span id="scanStatus" style="color:#ff9800;">ACTIVE</span></span></div></div></div>
-            `}
-          </div>
-          <div class="cyber-panel earth-panel"><div class="cyber-title"><span class="blink-dot"></span> GLOBAL NETWORK</div><canvas id="earth"></canvas><div class="network-status"><div class="status-title">NETWORK STATUS</div><div class="status-online blink">● ONLINE</div><div class="status-grid"><div class="status-box"><span>NODES</span><b id="nodesCount">1287</b></div><div class="status-box"><span>LATENCY</span><b id="latency">48 ms</b></div><div class="status-box"><span>UPTIME</span><b id="uptime">99.98%</b></div></div></div></div>
-          <div class="cyber-panel logs"><div class="cyber-title"><span class="blink-dot"></span> LIVE SERVER LOG</div><div id="logArea"></div></div>
-        </div>
-        <div class="led"></div>
-      </div>
-
-      <div class="cyber-panel signal-monitor">
-        <div class="signal-header"><div class="cyber-title"><span class="blink-dot"></span> NETWORK SIGNAL MONITOR</div><div class="signal-state blink" id="signalState">📶 STRONG SIGNAL SIMCARD</div></div>
-        <canvas id="signalChart" width="900" height="170"></canvas>
-        <div class="signal-info"><div class="signal-box"><div class="signal-label">SIGNAL SIMCARD</div><div class="signal-value" id="dbmValue">-42 dBm</div></div><div class="signal-box"><div class="signal-label">NOISE SIM</div><div class="signal-value" id="noiseValue">-92 dBm</div></div><div class="signal-box"><div class="signal-label">ANTENNA LOSS</div><div class="signal-value" id="lossValue">0.00%</div></div><div class="signal-box"><div class="signal-label">CONNECTION</div><div class="signal-value" id="connectionValue">STABLE</div></div></div>
-      </div>
-    `;
-
-    setTimeout(() => {
-      startSignalChart();
-      if (window.startEarth) window.startEarth();
-      startRadar();
-      startServerLoad(emp);
-      startNetworkStats();
-      startLogs(emp);
-      startSessionTimer();
-      startSignalMonitor(emp);
-      updateSignalDisplay(emp.documents.stopSignal || false);
-      updateSignalBarState(emp.documents.stopSignalBar || false);
-    }, 100);
-  }, 2000);
-}
-
-function closeLinePage() {
-  const overlay = document.getElementById('lineOverlay');
-  if (overlay) overlay.remove();
-  
-  if (!window.isAdmin) {
-    document.getElementById('mainApp').style.display = 'flex';
-    renderAllCards();
-  }
-}
-
-// ========== LINE Control Functions ==========
-async function saveLineData(empId) {
-  const emp = employees.find(e => e.id == empId);
-  if (!emp) return;
-
-  if (currentMode === 'admin') {
-    const birthInput = document.getElementById('birthDateEdit');
-    const phoneInput = document.getElementById('phoneEdit');
-    const cardInput = document.getElementById('cardEdit');
-    const lineCodeTop = document.getElementById('lineCodeEditTop');
-
-    if (birthInput) emp.birthDate = birthInput.value;
-    if (phoneInput) emp.phone = phoneInput.value;
-    if (cardInput) emp.cardNumber = cardInput.value;
-    if (lineCodeTop) emp.documents.lineCode = lineCodeTop.value;
-  }
-
-  const startDateInput = document.getElementById('startDate');
-  if (startDateInput) {
-    emp.documents.expiryStart = new Date(startDateInput.value + "T00:00:00").getTime();
-  }
-
-  const lineCodeBottom = document.getElementById('lineCodeEdit');
-  if (lineCodeBottom && currentMode !== 'admin') {
-    emp.documents.lineCode = lineCodeBottom.value;
-  }
-  if (currentMode === 'admin' && lineCodeBottom) {
-    if (!document.getElementById('lineCodeEditTop').value) {
-      emp.documents.lineCode = lineCodeBottom.value;
-    }
-  }
-
-  await saveEmployeesToDatabase();
-  alert("✅ LINE UPDATED");
-  closeLinePage();
-}
-
-// ========== Toggle Functions ==========
-async function toggleCPU(empId) {
-  const emp = employees.find(e => e.id == empId);
-  if (!emp) return;
-  emp.documents.stopCPU = !emp.documents.stopCPU;
-  await saveEmployeesToDatabase();
-  closeLinePage();
-  openLinePage(empId);
-}
-
-async function toggleRAM(empId) {
-  const emp = employees.find(e => e.id == empId);
-  if (!emp) return;
-  emp.documents.stopRAM = !emp.documents.stopRAM;
-  await saveEmployeesToDatabase();
-  closeLinePage();
-  openLinePage(empId);
-}
-
-async function toggleNetwork(empId) {
-  const emp = employees.find(e => e.id == empId);
-  if (!emp) return;
-  emp.documents.stopNetwork = !emp.documents.stopNetwork;
-  await saveEmployeesToDatabase();
-  closeLinePage();
-  openLinePage(empId);
-}
-
-async function toggleLogs(empId) {
-  const emp = employees.find(e => e.id == empId);
-  if (!emp) return;
-  emp.documents.stopLogs = !emp.documents.stopLogs;
-  await saveEmployeesToDatabase();
-  closeLinePage();
-  openLinePage(empId);
-}
-
-async function toggleMovement(empId) {
-  const emp = employees.find(e => e.id == empId);
-  if (!emp) return;
-  emp.documents.stopMovement = !emp.documents.stopMovement;
-  await saveEmployeesToDatabase();
-  closeLinePage();
-  openLinePage(empId);
-}
-
-async function toggleSignal(empId) {
-  const emp = employees.find(e => e.id == empId);
-  if (!emp) return;
-  emp.documents.stopSignal = !emp.documents.stopSignal;
-  await saveEmployeesToDatabase();
-  closeLinePage();
-  openLinePage(empId);
-}
-
-async function toggleSignalBar(empId) {
-  const emp = employees.find(e => e.id == empId);
-  if (!emp) return;
-  emp.documents.stopSignalBar = !emp.documents.stopSignalBar;
-  await saveEmployeesToDatabase();
-  closeLinePage();
-  openLinePage(empId);
-}
-
-// ========== Dynamic Effect Functions ==========
-function startServerLoad(emp) {
-  const cpu = document.getElementById("cpu");
-  const ram = document.getElementById("ram");
-  const network = document.getElementById("network");
-
-  if (cpu || ram || network) {
-    const interval = setInterval(() => {
-      if (cpu && !emp.documents.stopCPU) {
-        cpu.style.width = (40 + Math.random() * 60) + "%";
-      }
-      if (ram && !emp.documents.stopRAM) {
-        ram.style.width = (30 + Math.random() * 60) + "%";
-      }
-      if (network && !emp.documents.stopMovement) {
-        network.style.width = (30 + Math.random() * 60) + "%";
-      }
-    }, 1000);
-  }
-}
-
-function startNetworkStats() {
-  const nodesCount = document.getElementById("nodesCount");
-  const latency = document.getElementById("latency");
-  const uptime = document.getElementById("uptime");
-
-  if (nodesCount) {
-    setInterval(() => {
-      nodesCount.textContent = 1200 + Math.floor(Math.random() * 400);
-      latency.textContent = (20 + Math.floor(Math.random() * 40)) + " ms";
-      uptime.textContent = (99.90 + Math.random() * 0.09).toFixed(2) + "%";
-    }, 800);
-  }
-}
-
-function startLogs(emp) {
-  if (window.logInterval) clearInterval(window.logInterval);
-
-  const logs = [
-    "AUTH SUCCESS", "DATABASE VERIFIED", "FIREBASE CONNECTED",
-    "API RESPONSE 200", "TOKEN GENERATED", "EMPLOYEE SYNC",
-    "NETWORK ACTIVE", "SERVER READY", "ENCRYPTION ENABLED",
-    "BACKUP COMPLETED"
-  ];
-
-  const logArea = document.getElementById("logArea");
-  if (!logArea) return;
-
-  window.logInterval = setInterval(() => {
-    if (emp.documents.stopLogs) return;
-    const div = document.createElement("div");
-    div.style.margin = "4px 0";
-    div.innerText = "[" + new Date().toLocaleTimeString("en-GB", { hour12: false }) + "] " + logs[Math.floor(Math.random() * logs.length)];
-    logArea.appendChild(div);
-    if (logArea.children.length > 18) {
-      logArea.removeChild(logArea.firstChild);
-    }
-  }, 400);
-}
-
-function startSessionTimer() {
-  if (window.sessionInterval) clearInterval(window.sessionInterval);
-  let seconds = 0;
-  window.sessionInterval = setInterval(() => {
-    seconds++;
-    const el = document.getElementById("sessionTime");
-    if (el) {
-      const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-      const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-      const s = String(seconds % 60).padStart(2, '0');
-      el.textContent = `${h}:${m}:${s}`;
-    }
-  }, 1000);
-}
-
-function startSignalMonitor(emp) {
-  const dbmValue = document.getElementById("dbmValue");
-  const noiseValue = document.getElementById("noiseValue");
-  const lossValue = document.getElementById("lossValue");
-  const connectionValue = document.getElementById("connectionValue");
-
-  if (dbmValue && noiseValue && lossValue && connectionValue) {
-    setInterval(() => {
-      if (emp.documents.stopSignal) return;
-      dbmValue.textContent = -(40 + Math.floor(Math.random() * 45)) + " dBm";
-      noiseValue.textContent = -(80 + Math.floor(Math.random() * 15)) + " dBm";
-      lossValue.textContent = (Math.random() * 0.5).toFixed(2) + "%";
-      connectionValue.textContent = "STABLE";
-      connectionValue.style.color = "#00ff88";
-    }, 1500);
-  }
-}
-
-function updateSignalDisplay(isStopped) {
-  const signalState = document.getElementById('signalState');
-  if (signalState) {
-    signalState.textContent = isStopped ? '📶 SIGNAL STOPPED' : '📶 STRONG SIGNAL SIMCARD';
-    signalState.style.color = isStopped ? '#ff5252' : '#00ff88';
-  }
-  const dbmValue = document.getElementById('dbmValue');
-  if (dbmValue) {
-    dbmValue.textContent = isStopped ? '--' : '-42 dBm';
-    dbmValue.style.color = isStopped ? '#ff5252' : '#00ff88';
-  }
-  const noiseValue = document.getElementById('noiseValue');
-  if (noiseValue) {
-    noiseValue.textContent = isStopped ? '--' : '-92 dBm';
-    noiseValue.style.color = isStopped ? '#ff5252' : '#00ff88';
-  }
-  const lossValue = document.getElementById('lossValue');
-  if (lossValue) {
-    lossValue.textContent = isStopped ? '--' : '0.00%';
-    lossValue.style.color = isStopped ? '#ff5252' : '#00ff88';
-  }
-  const connectionValue = document.getElementById('connectionValue');
-  if (connectionValue) {
-    connectionValue.textContent = isStopped ? '❌ ERROR SIM' : 'STABLE';
-    connectionValue.style.color = isStopped ? '#ff5252' : '#00ff88';
-  }
-}
-
-function updateSignalBarState(isStopped) {
-  const sFill = document.getElementById('signalFill');
-  const sValue = document.getElementById('signalValue');
-  if (!sFill || !sValue) return;
-
-  if (isStopped) {
-    sFill.style.width = '50%';
-    sFill.style.background = '#ff1744';
-    sFill.style.boxShadow = '0 0 20px rgba(255,23,68,0.5)';
-    sValue.textContent = 'STOPPED';
-    sValue.style.color = '#ff5252';
-    if (window.signalIntervalId) {
-      clearInterval(window.signalIntervalId);
-      window.signalIntervalId = null;
-    }
-  } else {
-    sFill.style.background = '#00ff88';
-    sFill.style.boxShadow = '0 0 20px rgba(0,255,136,0.3)';
-    sValue.style.color = '#00ff88';
-    if (!window.signalIntervalId) {
-      window.signalIntervalId = setInterval(() => {
-        const sf = document.getElementById('signalFill');
-        const sv = document.getElementById('signalValue');
-        if (sf && sv) {
-          const value = 85 + Math.floor(Math.random() * 16);
-          sv.textContent = value + "%";
-          sf.style.width = value + "%";
-        }
-      }, 1000);
-    }
-  }
-}
-
-function startRadar() {
-  const radar = document.getElementById("radarCanvas");
-  if (!radar) return;
-
-  const ctx = radar.getContext("2d");
-  let angle = 0;
-
-  function drawRadar() {
-    const w = radar.width;
-    const h = radar.height;
-    ctx.clearRect(0, 0, w, h);
-
-    const cx = w / 2;
-    const cy = h / 2;
-
-    ctx.strokeStyle = "#00ff88";
-    ctx.lineWidth = 1;
-    for (let r = 30; r <= 90; r += 20) {
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    ctx.beginPath();
-    ctx.moveTo(cx, 0);
-    ctx.lineTo(cx, h);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0, cy);
-    ctx.lineTo(w, cy);
-    ctx.stroke();
-
-    ctx.strokeStyle = "#00ff88";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(angle) * 90, cy + Math.sin(angle) * 90);
-    ctx.stroke();
-
-    ctx.fillStyle = "#00ff88";
-    for (let i = 0; i < 8; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const rr = 15 + Math.random() * 75;
-      ctx.beginPath();
-      ctx.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    angle += 0.02;
-    requestAnimationFrame(drawRadar);
-  }
-
-  drawRadar();
-
-  const targetCount = document.getElementById("targetCount");
-  const signalPower = document.getElementById("signalPower");
-  const scanStatus = document.getElementById("scanStatus");
-  const scanModes = ["ACTIVE", "TRACKING", "SCANNING", "LOCKED"];
-
-  setInterval(() => {
-    if (targetCount) targetCount.textContent = 10 + Math.floor(Math.random() * 15);
-    if (signalPower) signalPower.textContent = (90 + Math.floor(Math.random() * 10)) + "%";
-    if (scanStatus) scanStatus.textContent = scanModes[Math.floor(Math.random() * scanModes.length)];
-  }, 1000);
-}
-
-function startSignalChart() {
-  const canvas = document.getElementById("signalChart");
-  if (!canvas) return;
-
-  const ctx = canvas.getContext("2d");
-  const data = [];
-
-  for (let i = 0; i < 120; i++) {
-    data.push(60 + Math.random() * 60);
-  }
-
-  function drawSignalChart() {
-    if (!document.getElementById("signalChart")) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.strokeStyle = "#003d22";
-    ctx.lineWidth = 1;
-    for (let x = 0; x < canvas.width; x += 30) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += 25) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
-    }
-
-    ctx.beginPath();
-    ctx.strokeStyle = "#00ff88";
-    ctx.lineWidth = 2;
-    data.forEach((v, i) => {
-      const px = i * (canvas.width / data.length);
-      const py = canvas.height - v;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    });
-    ctx.stroke();
-
-    data.shift();
-    data.push(40 + Math.random() * 100);
-
-    requestAnimationFrame(drawSignalChart);
-  }
-
-  drawSignalChart();
-}
-
-// ========== Render Cards ==========
-function renderCard(emp, isAdmin) {
-  const docs = emp.documents || {};
-
-  let fieldsHtml = '';
-  if (isAdmin) {
-    fieldsHtml = `
-      ${adminInput("🆔", "ID", "id", emp.id)}
-      ${adminInput("📘", "Passport", "passport", emp.passport)}
-      ${adminInput("👤", "Name", "name", emp.name)}
-      ${adminInput("💰", "Salary", "salary", emp.salary)}
-      ${adminInput("💵", "Balance", "balance", emp.balance)}
-      ${adminInput("🏦", "IBAN", "iban", emp.iban)}
-      ${adminInput("💳", "Card Number", "cardNumber", emp.cardNumber)}
-      ${adminInput("📁", "Account", "account", emp.account)}
-      ${adminInput("📅", "Expiry", "expiry", emp.expiry)}
-      ${adminInput("🔐", "CCV2", "ccv2", emp.ccv2)}
-      ${adminInput("📍", "ZIP", "zip", emp.zip)}
-      ${adminInput("📱", "Phone", "phone", emp.phone)}
-      ${adminInput("🏦", "Bank", "Bank", emp.loan || "")}
-      ${adminInput("🔑", "Password", "password", emp.password || "123456")}
-    `;
-  } else {
-    fieldsHtml = `
-      ${row("🆔", "ID", emp.id)}
-      ${row("📘", "Passport", emp.passport)}
-      ${row("👤", "Name", emp.name)}
-      ${row("💰", "Salary", formatNumber(emp.salary))}
-      ${row("💵", "Balance", formatNumber(emp.balance || 0))}
-      ${row("🏦", "IBAN", emp.iban)}
-      ${row("💳", "Card Number", emp.cardNumber)}
-      ${row("📁", "Account", emp.account)}
-      ${row("📅", "Expiry", emp.expiry)}
-      ${row("🔐", "CCV2", emp.ccv2)}
-      ${row("📍", "ZIP", emp.zip)}
-      ${row("📱", "Phone", emp.phone)}
-      ${row("🏦", "Bank", emp.loan || "-")}
-    `;
-  }
-
-  let lineHtml = '';
-  if (isAdmin) {
-    lineHtml = `
-      <button class="line-btn ${docs.lineEnabled ? 'active' : 'inactive'}" onclick="toggleLine('${emp.id}')">
-        ${docs.lineEnabled ? '🟢 Active (click to deactivate)' : '🔴 Inactive (click to activate)'}
-      </button>
-    `;
-  } else {
-    lineHtml = `
-      <div class="line-status ${docs.lineEnabled ? 'active' : 'inactive'}">
-        <span>${docs.lineEnabled ? '🟢 LINE ACTIVE' : '🔴 LINE INACTIVE'}</span>
-      </div>
-    `;
-  }
-
-  let adminButtons = '';
-  if (isAdmin) {
-    adminButtons = `
-      <div class="btn-group">
-        <button class="btn btn-save" onclick="saveEmployee('${emp.id}')">💾 Save</button>
-        <button class="btn btn-delete" onclick="deleteEmployee('${emp.id}')">🗑 Delete</button>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="card" id="${isAdmin ? 'admin-card-' + emp.id : ''}">
-      ${fieldsHtml}
-      ${adminButtons}
-      <div class="line-section">
-        ${lineHtml}
-      </div>
-    </div>
-  `;
-}
-// ==========================================
-// LINE MARKET FUNCTIONS
-// ==========================================
-
-async function openLineMarket() {
-  const overlay = document.createElement('div');
-  overlay.id = 'lineMarketOverlay';
-  overlay.style.cssText = `
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #000; z-index: 9998; overflow-y: auto; overflow-x: hidden;
-    font-family: 'Courier New', monospace; color: #fff;
-    scroll-behavior: smooth;
-  `;
-
-  overlay.innerHTML = `
-    <div style="display:flex;justify-content:center;align-items:center;height:100vh;color:#00ff88;font-size:18px;letter-spacing:3px;">
-      ⏳ LOADING LINE MARKET...
-    </div>
-  `;
-  document.body.appendChild(overlay);
-
-  const snapshot = await db.ref("lineMarket").once("value");
-  const lines = snapshot.val() || {};
-  
-  let cardsHTML = '';
-  
-  for (let key in lines) {
-    const line = lines[key];
-    const priceId = 'price_' + key;
-    cardsHTML += `
-      <div class="line-card" style="
-        background: rgba(0,20,10,0.8);
-        border: 1px solid rgba(0,255,136,0.3);
-        border-radius: 16px;
-        padding: 20px;
-        margin: 15px;
-        backdrop-filter: blur(20px);
-        box-shadow: 0 0 30px rgba(0,255,136,0.05);
-        transition: all 0.3s ease;
-      ">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <div class="blink" style="font-size: 22px; font-weight: bold; color: #00ff88; letter-spacing: 2px;">
-            ${line.name}
-          </div>
-          <div id="${priceId}" style="font-size: 20px; font-weight: bold; color: #00ff88; text-shadow: 0 0 15px rgba(0,255,136,0.3);">
-            €${(line.basePrice + (Math.random() * line.fluctuation * 2 - line.fluctuation)).toFixed(2)}
-          </div>
-        </div>
-        
-        <div class="blink" style="
-          font-size: 13px; color: #00bcd4; letter-spacing: 3px;
-          margin-bottom: 15px; padding: 5px 0;
-          border-bottom: 1px solid rgba(0,255,136,0.1);
-        ">
-          ${line.category}
-        </div>
-        
-        <canvas id="chart_${key}" width="300" height="60" style="width: 100%; margin: 10px 0; border-radius: 8px;"></canvas>
-        
-        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.6);">
-          <span>⏱ ${line.duration}</span>
-          <span>👥 ${line.activeUsers}</span>
-          <span>🔄 ±${line.fluctuation} €</span>
-        </div>
-      </div>
-    `;
-  }
-  
-  overlay.innerHTML = `
-    <div style="padding: 20px; padding-bottom: 100px;">
-      
-      <div style="text-align: center; margin-bottom: 30px; padding-top: 20px;">
-        <div style="font-size: 28px; color: #00ff88; letter-spacing: 5px; text-shadow: 0 0 30px rgba(0,255,136,0.5); margin-bottom: 8px;">
-          🌐 INTERNATIONAL LINE MARKET
-        </div>
-        <div class="blink-yellow" style="font-size: 12px; color: #ffcc00; letter-spacing: 2px;">
-          Live Market • 189 Countries • 24/7 Active
-        </div>
-        
-        <!-- 🔥 کانتر ۱۰۰ میلیون -->
-        <div style="margin-top: 15px; padding: 12px; background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2); border-radius: 10px; display: inline-block;">
-          <div style="font-size: 12px; color: rgba(255,255,255,0.5); letter-spacing: 1px;">👥 GLOBAL USERS</div>
-          <div id="globalUsersCounter" style="font-size: 24px; font-weight: bold; color: #00ff88; text-shadow: 0 0 20px rgba(0,255,136,0.4); margin: 5px 0;">100,234,567</div>
-          <div style="font-size: 10px; color: #ffcc00;" class="blink-yellow">● LIVE</div>
-        </div>
-        
-      </div>
-      
-      <div style="max-width: 500px; margin: 0 auto;">
-        ${cardsHTML}
-      </div>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <button onclick="openNFCPayment()" style="
-          width: 100%; padding: 15px; background: #ff9800; color: #000;
-          border: none; border-radius: 12px; font-weight: bold; cursor: pointer;
-          font-family: 'Courier New', monospace; font-size: 16px; letter-spacing: 2px;
-          margin-bottom: 10px;
-        ">💳 PAY WITH NFC (-€100)</button>
-        
-        <button onclick="closeLineMarket()" style="
-          background: #ff1744; color: white; border: none;
-          padding: 12px 40px; border-radius: 10px;
-          font-family: 'Courier New', monospace; font-size: 14px;
-          cursor: pointer; letter-spacing: 2px;
-        ">← BACK</button>
-      </div>
-      
-      <div style="
-        text-align: center; padding: 20px;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        margin-top: 20px;
-      ">
-        <div class="blink-green" style="
-          font-size: 16px; color: #00ff88; letter-spacing: 2px;
-          margin-bottom: 15px; font-weight: bold;
-        ">
-          ⚠️ INTERNATIONAL LINE COMPANY - RUSSIA
-        </div>
-        <div style="font-size: 11px; color: #ffcc00; line-height: 1.8;">
-          All purchases are conducted online & remotely<br>
-          Representatives in 189 countries • 24/7 Operations<br>
-          Requires official authorization or company security key<br>
-          For: Companies • Banks • Labs • Aerospace<br>
-          Automotive • Robotics • Satellites & Authorized Enterprises
-        </div>
-      </div>
-      
-    </div>
-    
-    <style>
-      @keyframes blink {
-        0%, 50% { opacity: 1; }
-        51%, 100% { opacity: 0.4; }
-      }
-      @keyframes blinkYellow {
-        0%, 50% { opacity: 1; }
-        51%, 100% { opacity: 0.3; }
-      }
-      @keyframes blinkGreen {
-        0%, 50% { opacity: 1; }
-        51%, 100% { opacity: 0.3; }
-      }
-      .blink { animation: blink 1.5s infinite; }
-      .blink-yellow { animation: blinkYellow 1s infinite; }
-      .blink-green { animation: blinkGreen 1s infinite; }
-      .line-card:hover {
-        border-color: #00ff88 !important;
-        box-shadow: 0 0 50px rgba(0,255,136,0.15) !important;
-        transform: scale(1.02);
-      }
-    </style>
-  `;
-  
-  // 🔥 کانتر زنده ۱۰۰ میلیون
-  let globalUsers = 100234567;
-  setInterval(() => {
-    globalUsers += Math.floor(Math.random() * 50);
-    const el = document.getElementById('globalUsersCounter');
-    if (el) el.textContent = globalUsers.toLocaleString();
-  }, 3000);
-  
-  for (let key in lines) {
-    const line = lines[key];
-    updatePrice(key, line);
-    setInterval(() => updatePrice(key, line), 2000);
-    drawMiniChart(key);
-  }
-}
-
-function closeLineMarket() {
-  const overlay = document.getElementById('lineMarketOverlay');
-  if (overlay) overlay.remove();
-}
-
-function updatePrice(key, line) {
-  const priceEl = document.getElementById('price_' + key);
-  if (!priceEl) return;
-  
-  const newPrice = line.basePrice + (Math.random() * line.fluctuation * 2 - line.fluctuation);
-  const oldPrice = parseFloat(priceEl.textContent.replace('€', '').replace(',', '')) || newPrice;
-  
-  const diff = newPrice - oldPrice;
-  const color = diff >= 0 ? '#00ff88' : '#ff5252';
-  const arrow = diff >= 0 ? '↑' : '↓';
-  
-  priceEl.style.color = color;
-  priceEl.textContent = `€${newPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${arrow}`;
-}
-
-function drawMiniChart(key) {
-  const canvas = document.getElementById('chart_' + key);
-  if (!canvas) return;
-  
-  const ctx = canvas.getContext('2d');
-  const data = [];
-  for (let i = 0; i < 30; i++) data.push(Math.random() * 40 + 30);
-  
-  function draw() {
-    if (!document.getElementById('chart_' + key)) return;
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.strokeStyle = 'rgba(0,255,136,0.2)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < canvas.width; x += 30) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-    }
-    
-    ctx.beginPath();
-    ctx.strokeStyle = '#00ff88';
-    ctx.lineWidth = 2;
-    ctx.shadowColor = '#00ff88';
-    ctx.shadowBlur = 8;
-    
-    data.forEach((v, i) => {
-      const px = i * (canvas.width / data.length);
-      const py = canvas.height - v;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    });
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    
-    data.shift();
-    data.push(Math.random() * 40 + 30);
-    
-    requestAnimationFrame(draw);
-  }
-  draw();
-}
-
-function openLineMarketAdmin() {
-  const overlay = document.createElement('div');
-  overlay.id = 'lineMarketAdminOverlay';
-  overlay.style.cssText = `
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.95); z-index: 9999; overflow-y: auto;
-    font-family: 'Courier New', monospace; color: #fff; padding: 20px;
-  `;
-
-  db.ref("lineMarket").once("value").then(snapshot => {
-    const lines = snapshot.val() || {};
-    
-    let listHTML = '';
-    for (let key in lines) {
-      const l = lines[key];
-      listHTML += `
-        <div style="background:rgba(0,20,10,0.6); border:1px solid rgba(0,255,136,0.2); border-radius:10px; padding:15px; margin:10px 0;">
-          <strong style="color:#00ff88;">${l.name}</strong> | 
-          ${l.category} | 
-          €${l.basePrice} | 
-          ±${l.fluctuation} | 
-          ${l.duration} | 
-          👥${l.activeUsers}
-          <br>
-          <button onclick="deleteLine('${key}')" style="margin-top:8px; padding:6px 15px; background:#ff1744; color:#fff; border:none; border-radius:5px; cursor:pointer;">🗑 Delete</button>
-        </div>
-      `;
-    }
-    
-    overlay.innerHTML = `
-      <h2 style="color:#00ff88; letter-spacing:3px; text-align:center;">📡 MANAGE LINE MARKET</h2>
-      
-      <div style="background:rgba(0,255,136,0.05); border:1px solid rgba(0,255,136,0.2); border-radius:15px; padding:20px; margin:20px 0;">
-        <h3 style="color:#00bcd4;">➕ ADD NEW LINE</h3>
-        <input id="newName" placeholder="Line Name" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; font-family:monospace;">
-        <input id="newCategory" placeholder="Category (e.g. BANKING SYSTEM)" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; font-family:monospace;">
-        <input id="newPrice" type="number" placeholder="Base Price (EUR)" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; font-family:monospace;">
-        <input id="newFluctuation" type="number" placeholder="Fluctuation (± EUR)" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; font-family:monospace;">
-        <input id="newDuration" placeholder="Duration (e.g. 5 Years)" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; font-family:monospace;">
-        <input id="newUsers" placeholder="Active Users (e.g. 1,200+)" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; font-family:monospace;">
-        <button onclick="addNewLine()" style="width:100%; margin-top:10px; padding:12px; background:#00ff88; color:#000; border:none; border-radius:10px; font-weight:bold; cursor:pointer; letter-spacing:2px; font-family:monospace;">💾 ADD LINE</button>
-      </div>
-      
-      <h3 style="color:#00ff88; letter-spacing:2px;">📋 CURRENT LINES:</h3>
-      ${listHTML}
-      
-      <button onclick="closeLineMarketAdmin()" style="width:100%; margin:20px 0; padding:12px; background:#ff1744; color:#fff; border:none; border-radius:10px; cursor:pointer; letter-spacing:2px; font-family:monospace;">← BACK</button>
-    `;
-    
-    document.body.appendChild(overlay);
-  });
-}
-
-function addNewLine() {
-  const name = document.getElementById('newName').value.trim();
-  const category = document.getElementById('newCategory').value.trim();
-  const basePrice = parseFloat(document.getElementById('newPrice').value) || 0;
-  const fluctuation = parseFloat(document.getElementById('newFluctuation').value) || 100;
-  const duration = document.getElementById('newDuration').value.trim();
-  const activeUsers = document.getElementById('newUsers').value.trim();
-  
-  if (!name || !category) return alert('Name and Category are required!');
-  
-  const newLine = { name, category, basePrice, fluctuation, duration, activeUsers };
-  
-  db.ref("lineMarket").push(newLine)
-    .then(() => {
-      alert('✅ Line added!');
-      closeLineMarketAdmin();
-      openLineMarketAdmin();
-    });
-}
-
-function deleteLine(key) {
-  if (confirm('Delete this line?')) {
-    db.ref("lineMarket/" + key).remove()
-      .then(() => {
-        closeLineMarketAdmin();
-        openLineMarketAdmin();
-      });
-  }
-}
-
-function closeLineMarketAdmin() {
-  const overlay = document.getElementById('lineMarketAdminOverlay');
-  if (overlay) overlay.remove();
-}
-async function checkLineActivation(empId) {
-    const snap = await db.ref("lineActivations/" + empId).once("value");
-    const data = snap.val();
-    
-    if (!data || !data.active) return null;
-    
-    const now = Date.now();
-    const remaining = data.endTime - now;
-    
-    if (remaining <= 0) {
-        // Activation complete
-        await db.ref("lineActivations/" + empId).set({ active: false });
-        
-        // کم کردن ۱ یورو
-        const emp = employees.find(e => e.id === empId);
-        if (emp) {
-            emp.balance = (emp.balance || 0) - 1;
-            await saveEmployeesToDatabase();
-        }
-        
-        // فعال کردن LINE
-        if (emp && emp.documents) {
-            emp.documents.lineEnabled = true;
-            emp.documents.lineCode = "HANOVER 5690";
-            emp.documents.expiryStart = Date.now();
-            await saveEmployeesToDatabase();
-        }
-        
-        return { status: 'complete' };
-    }
-    
-    return {
-        status: 'counting',
-        remaining: remaining,
-        total: data.duration,
-        progress: Math.floor(((data.duration - remaining) / data.duration) * 100),
-        minutes: Math.floor(remaining / 60000),
-        seconds: Math.floor((remaining % 60000) / 1000)
-    };
-}
-async function showActivationCountdown(empId) {
-    const snap = await db.ref("lineActivations/" + empId).once("value");
-    const data = snap.val();
-    
-    if (!data || !data.active) return '';
-    
-    const now = Date.now();
-    const remaining = data.endTime - now;
-    
-    if (remaining <= 0) {
-        // 🎉 ACTIVATION COMPLETE!
-        await db.ref("lineActivations/" + empId).set({ active: false });
-        
-        // کم کردن ۱ یورو
-        const idx = employees.findIndex(e => e.id === empId);
-        if (idx !== -1) {
-            employees[idx].balance = (employees[idx].balance || 0) - 1;
-            if (employees[idx].documents) {
-                employees[idx].documents.lineEnabled = true;
-                employees[idx].documents.lineCode = "HANOVER 5690";
-            }
-            await saveEmployeesToDatabase();
-        }
-        
-        // ایمیل COMMERZBANK
-        const emp = employees.find(e => e.id === empId);
-        if (emp && emp.email) {
-            try {
-                await fetch("https://script.google.com/macros/s/AKfycbxqDheYEBti1Qdh77wqLRUIW-_fQWtSXB7nihi_veCbqto-wcTDyNl5jXOMNSNInAvqLw/exec", {
-                    method: "POST",
-                    body: JSON.stringify({
-                        to: emp.email,
-                        subject: "✅ LINE HANOVER 5690 - Activated for 5 Years",
-                        body: `Dear ${emp.name},\n\nYour LINE HANOVER 5690 has been ACTIVATED.\n\n📅 Valid Until: 2031-07-24\n💰 Balance: €${emp.balance.toFixed(2)}\n💳 Card: **** ${(emp.cardNumber||'5098').slice(-4)}\n\nCOMMERZBANK Intl. Line System`
-                    })
-                });
-            } catch(e) {}
-        }
-        
-        return `
-            <div class="card" style="text-align:center; background:rgba(0,255,136,0.1); border:2px solid #00ff88; animation: fadeIn 0.5s;">
-                <div style="font-size:40px;">🎉</div>
-                <div style="color:#00ff88; font-size:20px; font-weight:bold;">✅ LINE ACTIVATED!</div>
-                <div style="color:#ffcc00; font-size:14px;">📡 HANOVER 5690 - 5 Years</div>
-                <div style="color:#ff5252; margin-top:5px;">💸 Activation Fee: -€1.00</div>
-                <div style="color:#00bcd4; font-size:11px; margin-top:8px;">📧 Confirmation email sent!</div>
-            </div>
-        `;
-    }
-    
-    const totalSeconds = Math.floor(remaining / 1000);
-    const min = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
-    const sec = String(totalSeconds % 60).padStart(2, '0');
-    const progress = Math.floor(((data.duration - remaining) / data.duration) * 100);
-    
-    return `
-        <div class="card" style="text-align:center; background:rgba(0,0,0,0.8); border:1px solid #00ff88; padding:25px;">
-            <div style="color:#00bcd4; font-size:13px; letter-spacing:2px; margin-bottom:10px;">⏳ LINE VERIFICATION</div>
-            <div style="color:#ffcc00; font-size:14px; margin-bottom:5px;">📡 HANOVER 5690</div>
-            <div style="font-size:42px; color:#00ff88; font-weight:bold; text-shadow:0 0 20px rgba(0,255,136,0.5);">${min}:${sec}</div>
-            <div style="color:rgba(255,255,255,0.5); font-size:10px; margin-top:3px;">remaining</div>
-            <div style="background:rgba(255,255,255,0.08); border-radius:10px; height:14px; margin:15px 0; overflow:hidden; border:1px solid rgba(0,255,136,0.2);">
-                <div style="background:linear-gradient(90deg, #00c853, #00ff88); height:100%; border-radius:10px; width:${progress}%; transition:width 1s linear; box-shadow:0 0 15px rgba(0,255,136,0.4);"></div>
-            </div>
-            <div style="color:#00ff88; font-size:13px; font-weight:bold;">${progress}% Complete</div>
-            <div style="color:rgba(255,255,255,0.4); font-size:9px; margin-top:8px;">🔒 Please wait for verification</div>
-        </div>
-    `;
-}
-function renderAllCards() {
-  const container = document.getElementById('appContainer');
-  if (!container) return;
-
-  const isAdmin = (currentMode === 'admin');
-  let html = '';
-
-  if (isAdmin) {
-    html += `
-      <button onclick="addEmployee()" style="width:100%; padding:12px; margin-bottom:20px; background:#2196f3; color:#fff; border:none; border-radius:12px; font-weight:bold; font-size:15px; cursor:pointer;">
-        ➕ Add Employee
-      </button>
-    `;
-  }
-
-  if (employees.length === 0) {
-    html += '<div class="no-data">⛔ No employees found</div>';
-  } else {
-    if (isAdmin) {
-      employees.forEach(emp => {
-        html += renderCard(emp, isAdmin);
-      });
-    } else {
-      const empId = currentUser?.emp?.id;
-      const emp = employees.find(e => e.id == empId);
-      if (emp) {
-        html += renderCard(emp, false);
-        
-        // 🆕 کادر لود Countdown
-        html += `<div id="activationCountdown" style="margin-top:15px;"></div>`;
-        
-        html += `
-          <div class="card" style="text-align:center; margin-top:20px; background:rgba(0,188,212,0.05); border:1px solid rgba(0,188,212,0.2);">
-            <div style="font-size:18px; font-weight:bold; color:#00bcd4; margin-bottom:10px;">🌐 LINE MARKET</div>
-            <button onclick="openLineMarket()" style="width:100%; padding:10px; background:#00bcd4; color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">📡 VIEW AVAILABLE LINES</button>
-          </div>
-        `;
-      }
-    }
-  }
-
-  if (isAdmin) {
-    const firstEmp = employees[0];
-    const isLocked = firstEmp?.documents?.lineLocked || false;
-    html += `
-      <div class="card" style="text-align:center; margin-top:20px; background:rgba(0,188,212,0.05); border:1px solid rgba(0,188,212,0.2);">
-        <div style="font-size:18px; font-weight:bold; color:#00bcd4; margin-bottom:10px;">📡 LINE CONTROL</div>
-        <button onclick="openLinePage('${firstEmp?.id}')" style="width:100%; padding:10px; background:#00bcd4; color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-bottom:8px;">📡 OPEN LINE</button>
-        <button onclick="toggleLineLock('${firstEmp?.id}')" style="width:100%; padding:10px; background:${isLocked ? '#ff5252' : '#00c853'}; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">${isLocked ? '🔒 LINE LOCKED - Click to Unlock' : '🔓 LINE UNLOCKED - Click to Lock'}</button>
-      </div>
-    `;
-    html += `
-      <div class="card" style="text-align:center; margin-top:20px; background:rgba(0,188,212,0.05); border:1px solid rgba(0,188,212,0.2);">
-        <div style="font-size:18px; font-weight:bold; color:#ff9800; margin-bottom:10px;">📡 MANAGE LINE MARKET</div>
-        <button onclick="openLineMarketAdmin()" style="width:100%; padding:10px; background:#ff9800; color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">⚙️ ADMIN PANEL</button>
-      </div>
-    `;
-  } else {
-    const empId = currentUser?.emp?.id;
-    const emp = employees.find(e => e.id == empId);
-    const isLocked = emp?.documents?.lineLocked || false;
-    html += `
-      <div class="card" style="text-align:center; margin-top:20px; background:rgba(0,188,212,0.05); border:1px solid rgba(0,188,212,0.2);">
-        <div style="font-size:18px; font-weight:bold; color:#00bcd4; margin-bottom:10px;">📡 LINE</div>
-        ${isLocked ? `<div style="padding:10px; background:rgba(255,82,82,0.1); border-radius:8px; border:1px solid rgba(255,82,82,0.3);"><span style="color:#ff5252; font-weight:bold;">🔒 LINE IS LOCKED</span></div>` : `<button onclick="openLinePage('${empId}')" style="width:100%; padding:10px; background:#00bcd4; color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">📡 OPEN LINE</button>`}
-      </div>
-    `;
-  }
-
-  container.innerHTML = html;
-  
-  // 🔄 آپدیت زنده Countdown
-  if (!isAdmin && currentUser?.emp?.id) {
-    updateActivationCountdown();
-    setInterval(updateActivationCountdown, 1000);
-  }
-  
-  async function updateActivationCountdown() {
-    const cdHtml = await showActivationCountdown(currentUser.emp.id);
-    const cdDiv = document.getElementById('activationCountdown');
-    if (cdDiv) cdDiv.innerHTML = cdHtml || '';
-  }
-}
-
-// ========== Mode Switch ==========
-function switchMode(mode) {
-  currentMode = mode;
-  document.getElementById('mainApp').style.display = 'flex';
-  
-  const modeContainer = document.getElementById('modeSwitchContainer');
-  if (window.isAdmin) {
-    modeContainer.style.display = 'block';
-  } else {
-    modeContainer.style.display = 'none';
-  }
-
-  document.getElementById('empModeBtn').classList.toggle('active', mode === 'employee');
-  document.getElementById('admModeBtn').classList.toggle('active', mode === 'admin');
-  renderAllCards();
-}
-
-// ========== Init ==========
-async function loadData() {
-  // Wait for auth
-  await new Promise(resolve => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      unsubscribe();
-      resolve();
-    });
-  });
-  
+  if (!confirm('Are you sure?')) return;
+  await db.ref("employees/" + empId).remove();
   await loadEmployeesFromDatabase();
   renderAllCards();
 }
 
-async function toggleLineLock(empId) {
+async function saveEmployee(empId) {
+  const card = document.getElementById('admin-card-' + empId);
+  if (!card) return;
+  const inputs = card.querySelectorAll('input');
   const emp = employees.find(e => e.id == empId);
   if (!emp) return;
-  if (!emp.documents) emp.documents = {};
-  emp.documents.lineLocked = !emp.documents.lineLocked;
-  await saveEmployeesToDatabase();
-  renderAllCards();
-}
-
-// ========== LOADING OVERLAY ==========
-function showLoadingOverlay() {
-  document.getElementById('loadingOverlay').style.display = 'flex';
-}
-function checkConnection() {
-  if (!navigator.onLine) {
-    showCustomAlert('⚠️ No internet connection', 'CONNECTION ERROR');
-    return false;
-  }
-  return true;
-}
-
-// چک مداوم
-
-function openLineMarketAdmin() {
-  const overlay = document.createElement('div');
-  overlay.id = 'lineMarketAdminOverlay';
-  overlay.style.cssText = `
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.95); z-index: 9999; overflow-y: auto;
-    font-family: 'Courier New', monospace; color: #fff; padding: 20px;
-  `;
-
-  db.ref("lineMarket").once("value").then(snapshot => {
-    const lines = snapshot.val() || {};
-    
-    let listHTML = '';
-    for (let key in lines) {
-      const l = lines[key];
-      listHTML += `
-        <div style="background:rgba(0,20,10,0.6); border:1px solid rgba(0,255,136,0.2); border-radius:10px; padding:15px; margin:10px 0;">
-          <strong style="color:#00ff88;">${l.name}</strong> | 
-          ${l.category} | 
-          €${l.basePrice} | 
-          ±${l.fluctuation} | 
-          ${l.duration} | 
-          👥${l.activeUsers}
-          <br>
-          <button onclick="editLine('${key}')" style="margin-top:8px; padding:6px 15px; background:#00bcd4; color:#000; border:none; border-radius:5px; cursor:pointer; margin-right:5px;">✏️ Edit</button>
-          <button onclick="deleteLine('${key}')" style="margin-top:8px; padding:6px 15px; background:#ff1744; color:#fff; border:none; border-radius:5px; cursor:pointer;">🗑 Delete</button>
-        </div>
-      `;
-    }
-    
-    overlay.innerHTML = `
-      <h2 style="color:#00ff88; letter-spacing:3px; text-align:center;">📡 MANAGE LINE MARKET</h2>
-      
-      <div style="background:rgba(0,255,136,0.05); border:1px solid rgba(0,255,136,0.2); border-radius:15px; padding:20px; margin:20px 0;">
-        <h3 style="color:#00bcd4;">➕ ADD NEW LINE</h3>
-        <input id="newName" placeholder="Line Name" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px;">
-        <input id="newCategory" placeholder="Category (e.g. BANKING SYSTEM)" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px;">
-        <input id="newPrice" type="number" placeholder="Base Price (EUR)" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px;">
-        <input id="newFluctuation" type="number" placeholder="Fluctuation (± EUR)" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px;">
-        <input id="newDuration" placeholder="Duration (e.g. 5 Years)" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px;">
-        <input id="newUsers" placeholder="Active Users (e.g. 1,200+)" style="width:100%; margin:8px 0; padding:10px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px;">
-        <button onclick="addNewLine()" style="width:100%; margin-top:10px; padding:12px; background:#00ff88; color:#000; border:none; border-radius:10px; font-weight:bold; cursor:pointer; letter-spacing:2px;">💾 ADD LINE</button>
-      </div>
-      
-      <h3 style="color:#00ff88; letter-spacing:2px;">📋 CURRENT LINES:</h3>
-      ${listHTML}
-      
-      <button onclick="closeLineMarketAdmin()" style="width:100%; margin:20px 0; padding:12px; background:#ff1744; color:#fff; border:none; border-radius:10px; cursor:pointer; letter-spacing:2px;">← BACK</button>
-    `;
-    
-    document.body.appendChild(overlay);
-  });
-}
-
-function addNewLine() {
-  const name = document.getElementById('newName').value.trim();
-  const category = document.getElementById('newCategory').value.trim();
-  const basePrice = parseFloat(document.getElementById('newPrice').value) || 0;
-  const fluctuation = parseFloat(document.getElementById('newFluctuation').value) || 100;
-  const duration = document.getElementById('newDuration').value.trim();
-  const activeUsers = document.getElementById('newUsers').value.trim();
-  
-  if (!name || !category) return alert('Name and Category are required!');
-  
-  const newLine = { name, category, basePrice, fluctuation, duration, activeUsers };
-  
-  db.ref("lineMarket").push(newLine)
-    .then(() => {
-      alert('✅ Line added successfully!');
-      closeLineMarketAdmin();
-      openLineMarketAdmin(); // رفرش پنل
-    });
-}
-
-function deleteLine(key) {
-  if (confirm('Delete this line?')) {
-    db.ref("lineMarket/" + key).remove();
-    closeLineMarketAdmin();
-  }
-}
-
-function editLine(key) {
-  // بعداً اضافه میشه
-  alert('Edit coming soon!');
+  inputs.forEach(input => { const key = input.name; let value = input.value; if (key === 'salary' || key === 'balance') value = parseFloat(value) || 0; if (key === 'password' && value.trim() === '') return; emp[key] = value; });
+  await db.ref("employees/" + empId).set(emp);
+  await loadEmployeesFromDatabase();
+  showCustomAlert('✅ Information saved successfully');
 }
 
 // ==========================================
-// NFC PAYMENT TERMINAL
+// ALL OTHER FUNCTIONS (UNCHANGED FROM YOUR WORKING CODE)
 // ==========================================
+function showCustomAlert(message, title = 'INTERNATIONAL LINE SYSTEM') { document.getElementById('alertTitle').textContent = title; document.getElementById('alertMessage').textContent = message; document.getElementById('customAlertOverlay').style.display = 'flex'; }
+function closeCustomAlert() { document.getElementById('customAlertOverlay').style.display = 'none'; }
+let splashChecked = false;
+async function showSplashScreen() { if (window.SKIP_SPLASH) return; return new Promise((resolve) => { if (splashChecked) { startSplashAnimation(resolve); return; } splashChecked = true; setTimeout(() => { startSplashAnimation(resolve); }, 500); }); }
+function startSplashAnimation(resolve) { const messages = ["🔹 Initializing System...","🔹 Loading Modules...","🔹 Connecting to Database...","🔹 Server Status: ONLINE","🔹 Encryption: ACTIVE","🔹 International Line System Russia","🔹 System Ready!"]; let msgIndex = 0, charIndex = 0, progress = 0; document.getElementById("app").innerHTML = `<div class="splash-screen" style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;width:100vw;background:#000000;color:#00ff88;font-family:'Courier New',monospace;padding:20px;box-sizing:border-box;position:fixed;top:0;left:0;z-index:99999;"><div style="display:flex;gap:3px;margin-bottom:3px;justify-content:center;flex-wrap:wrap;max-width:350px;">${["I","N","T","E","R","N","A","T","I","O","N","A","L"].map((char,i)=>`<div id="charBox_${i}" style="width:22px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.08);border-radius:3px;color:rgba(0,255,136,0.08);transition:all 0.4s ease;font-family:'Courier New',monospace;">${char}</div>`).join('')}</div><div style="display:flex;gap:3px;margin-bottom:3px;justify-content:center;flex-wrap:wrap;">${["L","I","N","E"].map((char,i)=>`<div id="charBox_${i+13}" style="width:22px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.08);border-radius:3px;color:rgba(0,255,136,0.08);transition:all 0.4s ease;font-family:'Courier New',monospace;">${char}</div>`).join('')}</div><div style="display:flex;gap:3px;margin-bottom:3px;justify-content:center;flex-wrap:wrap;">${["S","Y","S","T","E","M"].map((char,i)=>`<div id="charBox_${i+17}" style="width:22px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.08);border-radius:3px;color:rgba(0,255,136,0.08);transition:all 0.4s ease;font-family:'Courier New',monospace;">${char}</div>`).join('')}</div><div style="display:flex;gap:3px;margin-bottom:25px;justify-content:center;flex-wrap:wrap;">${["R","U","S","S","I","A"].map((char,i)=>`<div id="charBox_${i+23}" style="width:22px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.08);border-radius:3px;color:rgba(0,255,136,0.08);transition:all 0.4s ease;font-family:'Courier New',monospace;">${char}</div>`).join('')}</div><div style="font-size:9px;color:rgba(0,255,136,0.3);margin-bottom:20px;letter-spacing:2px;">INTERNATIONAL LINE COMPANY</div><div style="font-size:10px;color:rgba(0,255,136,0.2);margin-bottom:20px;letter-spacing:3px;">─── SYSTEM INITIALIZATION ───</div><div id="typingText" style="font-size:13px;min-height:150px;color:#00ff88;text-shadow:0 0 20px rgba(0,255,136,0.15);font-family:'Courier New',monospace;text-align:left;letter-spacing:1px;margin-bottom:20px;line-height:1.8;width:85%;max-width:350px;"><span id="cursor" style="display:inline-block;width:2px;height:16px;background:#00ff88;animation:blink 0.8s infinite;"></span></div><div style="width:60%;max-width:300px;height:3px;background:rgba(0,255,136,0.06);border-radius:2px;overflow:hidden;border:1px solid rgba(0,255,136,0.03);"><div id="progressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#00ff88,#00c853,#00ff88);background-size:200% 100%;animation:progressGlow 1.5s ease-in-out infinite;border-radius:2px;transition:width 0.3s;"></div></div><div style="margin-top:12px;font-size:10px;color:rgba(0,255,136,0.35);letter-spacing:2px;"><span id="progressText">0%</span></div></div><style>@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}@keyframes progressGlow{0%{background-position:200% 0}100%{background-position:-200% 0}}.char-active{background:rgba(0,255,136,0.2)!important;border-color:#00ff88!important;color:#00ff88!important;box-shadow:0 0 25px rgba(0,255,136,0.25)!important;transform:scale(1.05)}</style>`; const totalChars = 29; let currentCharIndex = 0; const typingElement = document.getElementById('typingText'), progressBar = document.getElementById('progressBar'), progressText = document.getElementById('progressText'); function lightUpNextChar() { if (currentCharIndex < totalChars) { const box = document.getElementById(`charBox_${currentCharIndex}`); if (box) box.classList.add('char-active'); currentCharIndex++; setTimeout(lightUpNextChar, 150); } } setTimeout(lightUpNextChar, 300); function typeMessage() { if (msgIndex >= messages.length) { setTimeout(() => { resolve(); }, 2000); return; } const fullText = messages[msgIndex]; const displayText = fullText.substring(0, charIndex); let fullDisplay = ''; for (let i = 0; i < msgIndex; i++) fullDisplay += messages[i] + '\n'; fullDisplay += displayText; typingElement.innerHTML = `${fullDisplay}<span id="cursor" style="display:inline-block;width:2px;height:16px;background:#00ff88;animation:blink 0.8s infinite;"></span>`; progress = (msgIndex / messages.length) * 100 + (charIndex / fullText.length) * (100 / messages.length); progressBar.style.width = Math.min(progress, 100) + "%"; progressText.textContent = Math.floor(Math.min(progress, 100)) + "%"; charIndex++; if (charIndex <= fullText.length) { setTimeout(typeMessage, 70); } else { msgIndex++; charIndex = 0; setTimeout(typeMessage, 400); } } setTimeout(typeMessage, 300); }
+window.alert = function(msg) { showCustomAlert(msg); };
+function handleLogin() { if (!navigator.onLine) { showCustomAlert('⚠️ No internet connection', 'CONNECTION ERROR'); return; } const id = document.getElementById('loginId').value.trim(), pass = document.getElementById('loginPassword').value.trim(), error = document.getElementById('loginError'); auth.signInWithEmailAndPassword(id + "@ils.com", pass).then(async () => { if (id === 'dani') { currentMode = 'admin'; window.isAdmin = true; } else { currentMode = 'employee'; window.isAdmin = false; const snap = await db.ref("employees").once("value"); const list = snap.val(); const emp = Array.isArray(list) ? list.find(e => e.id === id) : Object.values(list).find(e => e.id === id); if (!emp) { error.style.display = 'block'; return; } currentUser = { type: 'employee', emp: emp }; } document.getElementById('loginOverlay').style.display = 'none'; showOTPOverlay(); }).catch(() => { error.style.display = 'block'; }); }
+function showOTPOverlay() { document.getElementById('otpOverlay').style.display = 'flex'; generateOTP(); startOTPTimer(); for (let i = 1; i <= 6; i++) document.getElementById('otp' + i).value = ''; document.getElementById('otp1').focus(); document.getElementById('otpError').style.display = 'none'; }
+function generateOTP() { currentOTP = String(Math.floor(100000 + Math.random() * 900000)); const notif = document.getElementById('otpNotification'), notifCode = document.getElementById('otpNotificationCode'); notifCode.textContent = currentOTP; notif.style.display = 'block'; setTimeout(() => { notif.classList.add('show'); }, 100); setTimeout(() => { notif.classList.remove('show'); setTimeout(() => { notif.style.display = 'none'; }, 600); }, 5000); }
+function verifyOTP() { if (!navigator.onLine) { showCustomAlert('⚠️ No internet connection', 'CONNECTION ERROR'); return; } let entered = ''; for (let i = 1; i <= 6; i++) entered += document.getElementById('otp' + i).value; if (entered === currentOTP) { document.getElementById('otpOverlay').style.display = 'none'; document.getElementById('otpNotification').style.display = 'none'; clearInterval(otpTimerInterval); showLoadingOverlay(); setTimeout(() => { hideLoadingOverlay(); showWelcomeOverlay(); setTimeout(() => { hideWelcomeOverlay(); document.getElementById('mainApp').style.display = 'flex'; if (currentMode === 'admin') { window.isAdmin = true; switchMode('admin'); } else { window.isAdmin = false; switchMode('employee'); } showCustomAlert('✅ Access Granted', 'INTERNATIONAL LINE SYSTEM'); }, 3000); }, 7000); } else { document.getElementById('otpError').style.display = 'block'; } }
+function otpAutoFocus(input) { if (input.value.length === 1 && input.nextElementSibling) input.nextElementSibling.focus(); }
+function hideLoadingOverlay() { document.getElementById('loadingOverlay').style.display = 'none'; }
+function startOTPTimer() { otpSecondsLeft = 30; document.getElementById('resendBtn').disabled = true; document.getElementById('otpTimer').textContent = '⏳ ' + otpSecondsLeft + 's'; clearInterval(otpTimerInterval); otpTimerInterval = setInterval(() => { otpSecondsLeft--; document.getElementById('otpTimer').textContent = '⏳ ' + otpSecondsLeft + 's'; if (otpSecondsLeft <= 0) { clearInterval(otpTimerInterval); document.getElementById('resendBtn').disabled = false; document.getElementById('otpTimer').textContent = ''; } }, 1000); }
+function resendOTP() { generateOTP(); startOTPTimer(); for (let i = 1; i <= 6; i++) document.getElementById('otp' + i).value = ''; document.getElementById('otp1').focus(); document.getElementById('otpError').style.display = 'none'; }
+function otpPaste(e) { e.preventDefault(); const paste = (e.clipboardData || window.clipboardData).getData('text'); const digits = paste.replace(/\D/g, '').slice(0, 6); for (let i = 0; i < 6; i++) { const input = document.getElementById('otp' + (i + 1)); if (input) input.value = digits[i] || ''; } const lastFilled = digits.length; if (lastFilled < 6) document.getElementById('otp' + (lastFilled + 1))?.focus(); else document.getElementById('otp6')?.focus(); }
+function otpKeyDown(e, input) { if (e.key === 'Backspace' && input.value === '') { if (input.previousElementSibling) input.previousElementSibling.focus(); } }
+function showWelcomeOverlay() { const el = document.getElementById('welcomeOverlay'); el.style.display = 'flex'; el.style.backgroundImage = "url('images/auth-bg.png')"; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; el.style.backgroundRepeat = 'no-repeat'; el.style.backgroundColor = '#000'; }
+function hideWelcomeOverlay() { document.getElementById('welcomeOverlay').style.display = 'none'; }
+function formatNumber(num) { if (num === undefined || num === null) return '0'; return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function row(icon, label, value) { return `<div class="field"><div class="field-label">${icon} ${label}</div><div class="field-value">${value}</div></div>`; }
+function adminInput(icon, label, name, currentValue) { return `<div class="admin-field"><label>${icon} ${label}</label><input class="admin-input" name="${name}" value="${currentValue}" /></div>`; }
+async function toggleLine(empId) { const emp = employees.find(e => e.id == empId); if (!emp) return; if (!emp.documents) emp.documents = {}; emp.documents.lineEnabled = !emp.documents.lineEnabled; await db.ref("employees/" + empId + "/documents/lineEnabled").set(emp.documents.lineEnabled); renderAllCards(); }
 
-function openNFCPayment() {
-  const overlay = document.createElement('div');
-  overlay.id = 'nfcPaymentOverlay';
-  overlay.style.cssText = `
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #000; z-index: 9999; display: flex;
-    flex-direction: column; justify-content: center; align-items: center;
-    font-family: 'Courier New', monospace;
-  `;
+function openLinePage(empId) { const emp = employees.find(e => e.id == empId); if (!emp) return; if (!emp.documents) emp.documents = {}; const fields = ['stopCPU','stopRAM','stopNetwork','stopLogs','stopMovement','stopSignal','stopSignalBar']; fields.forEach(f => { if (emp.documents[f] === undefined) emp.documents[f] = false; }); if (emp.documents.lineEnabled === undefined) emp.documents.lineEnabled = true; const start = emp.documents.expiryStart || Date.now(); const end = start + (5 * 365 * 24 * 60 * 60 * 1000); const fullName = emp.name || 'Unknown'; const birthDate = emp.birthDate || '0000/00/00'; const lineCode = emp.documents.lineCode || ''; const phone = emp.phone || 'Not Verified'; const cardNumber = emp.cardNumber || ''; const balance = emp.balance || 0; const formattedBalance = Number(balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\.00$/, ''); const overlay = document.createElement('div'); overlay.id = 'lineOverlay'; overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9999;overflow-y:auto;color:#00ff88;font-family:'Courier New',monospace;"; overlay.innerHTML = `<div style="position:relative;padding:15px;"><button onclick="closeLinePage()" style="position:sticky;top:10px;float:right;z-index:10;background:#ff1744;color:white;border:none;padding:10px 20px;border-radius:8px;font-weight:bold;cursor:pointer;">← Back</button><div style="clear:both;"></div><div class="scan"></div><div class="access">ACCESS GRANTED</div><div style="position:relative;z-index:2;padding:15px 15px 0 15px;"><div class="employee-info-card"><div class="emp-card-header"><div class="emp-avatar"><i class="fas fa-user-circle"></i></div><div class="emp-name-title"><div class="emp-fullname"><span class="blink-dot"></span> ${fullName}</div><div class="emp-badge blink">● ONLINE</div></div><div style="font-size:20px;font-weight:700;color:#00ff88;text-shadow:0 0 20px rgba(0,255,136,0.2);">€${formattedBalance}</div></div><div class="emp-info-grid-vertical">${currentMode === 'admin' ? `<div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-calendar-alt"></i> Birth Date</span><input id="birthDateEdit" type="text" value="${birthDate}" style="background:rgba(0,20,10,0.8);border:1px solid #00ff88;color:#00ff88;padding:8px;width:100%;font-family:monospace;border-radius:4px;"></div><div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-barcode"></i> Line Code</span><input id="lineCodeEditTop" type="text" value="${lineCode}" style="background:rgba(0,20,10,0.8);border:1px solid #00ff88;color:#00ff88;padding:8px;width:100%;font-family:monospace;border-radius:4px;"></div><div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-phone"></i> Phone</span><input id="phoneEdit" type="text" value="${phone}" style="background:rgba(0,20,10,0.8);border:1px solid #00ff88;color:#00ff88;padding:8px;width:100%;font-family:monospace;border-radius:4px;"></div><div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-credit-card"></i> Card Number</span><input id="cardEdit" type="text" value="${cardNumber}" style="background:rgba(0,20,10,0.8);border:1px solid #00ff88;color:#00ff88;padding:8px;width:100%;font-family:monospace;border-radius:4px;"></div>` : `<div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-calendar-alt"></i> Birth Date</span><span class="emp-info-value">${birthDate}</span></div><div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-barcode"></i> Line Code</span><span class="emp-info-value" style="font-family:monospace;letter-spacing:1px;word-break:break-all;">${lineCode||'—'}</span></div><div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-phone"></i> Phone</span><span class="emp-info-value">${phone}</span></div><div class="emp-info-item"><span class="emp-info-label"><span class="blink-dot"></span> <i class="fas fa-credit-card"></i> Card Number</span><span class="emp-info-value" style="font-family:monospace;letter-spacing:2px;word-break:break-all;">${cardNumber||'—'}</span></div>`}</div></div></div><div class="dashboard" style="position:relative;z-index:1;padding-top:5px;"><div class="cyber-panel"><div class="cyber-title"><span class="blink-dot"></span> SERVER LOAD</div>CPU<div class="bar"><div id="cpu" class="fill"></div></div><br>RAM<div class="bar"><div id="ram" class="fill"></div></div><br>NETWORK<div class="bar"><div id="network" class="fill"></div></div></div><div class="cyber-panel"><div class="cyber-title"><span class="blink-dot"></span> NETWORK ${emp.documents.Codeline||"Hanover 5690"}</div><div style="margin:6px 0;">ASIA: <span class="online-blink blink">${emp.documents.stopNetwork?"STOPPED":"ONLINE"}</span></div><div style="margin:6px 0;">EUROPE: <span class="online-blink blink">${emp.documents.stopNetwork?"STOPPED":"ONLINE"}</span></div><div style="margin:6px 0;">AMERICA: <span class="online-blink blink">${emp.documents.stopNetwork?"STOPPED":"ONLINE"}</span></div><div style="margin:6px 0;">AFRICA: <span class="online-blink blink">${emp.documents.stopNetwork?"STOPPED":"ONLINE"}</span></div></div><div class="cyber-panel"><div style="font-size:12px;opacity:.7;" class="blink-label">START DATE</div><input id="startDate" type="text" ${currentMode==='admin'?"":"readonly"} value="${new Date(start).toISOString().split('T')[0]}" style="width:100%;margin-bottom:10px;background:${currentMode==='admin'?'#001f12':'transparent'};border:${currentMode==='admin'?'1px solid #00ff88':'none'};outline:none;color:#00ff88;padding:6px;"><div style="font-size:12px;opacity:.7;" class="blink-label">END DATE</div><input id="endDate" type="text" ${currentMode==='admin'?"":"readonly"} value="${new Date(end).toISOString().split('T')[0]}" style="width:100%;margin-bottom:10px;background:${currentMode==='admin'?'#001f12':'transparent'};border:${currentMode==='admin'?'1px solid #00ff88':'none'};outline:none;color:#00ff88;padding:6px;"><div style="font-size:12px;opacity:.7;" class="blink-label">LINE CODE</div><input id="lineCodeEdit" ${currentMode==='admin'?"":"disabled"} value="${emp.documents.lineCode||''}" style="width:100%;background:${currentMode==='admin'?'#001f12':'transparent'};border:${currentMode==='admin'?'1px solid #00ff88':'none'};outline:none;color:#00ff88;padding:6px;font-size:14px;margin-bottom:10px;">${currentMode==='admin'?`<button onclick="saveLineData('${emp.id}')" style="width:100%;background:#009944;color:white;border:none;padding:10px;border-radius:8px;font-size:15px;font-weight:bold;margin-bottom:8px;cursor:pointer;">💾 SAVE</button><button onclick="toggleCPU('${emp.id}')" style="width:100%;background:#ff9800;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">⏸ CPU ${emp.documents.stopCPU?'RESUME':'STOP'}</button><button onclick="toggleRAM('${emp.id}')" style="width:100%;background:#ff5722;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">⏸ RAM ${emp.documents.stopRAM?'RESUME':'STOP'}</button><button onclick="toggleNetwork('${emp.id}')" style="width:100%;background:#9c27b0;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">⏸ NETWORK ${emp.documents.stopNetwork?'RESUME':'STOP'}</button><button onclick="toggleLogs('${emp.id}')" style="width:100%;background:#f44336;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">⏸ LOG ${emp.documents.stopLogs?'RESUME':'STOP'}</button><button onclick="toggleMovement('${emp.id}')" style="width:100%;background:#e91e63;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">⏸ MOVEMENT ${emp.documents.stopMovement?'RESUME':'STOP'}</button><button onclick="toggleSignal('${emp.id}')" style="width:100%;background:#3f51b5;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">📡 SIGNAL ${emp.documents.stopSignal?'RESUME':'STOP'}</button><button onclick="toggleSignalBar('${emp.id}')" style="width:100%;background:#e91e63;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">📊 SIGNAL BAR ${emp.documents.stopSignalBar?'RESUME':'STOP'}</button><button onclick="closeLinePage()" style="width:100%;background:#333;color:white;border:none;padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;">🔙 BACK</button>`:`<div class="cyber-panel mini-monitor"><div class="cyber-title"><span class="blink-dot"></span> EMPLOYEE STATUS</div><div class="status-line">ACCESS <span style="color:#00ff88;">GRANTED</span></div><div class="status-line">SECURITY <span style="color:#00ff88;" class="blink">ACTIVE</span></div><div class="status-line">SESSION <span id="sessionTime">00:00:00</span></div><div class="status-line">SIGNAL <span id="signalValue">100%</span></div><div class="signal-bar"><div id="signalFill"></div></div></div><div class="cyber-panel system-health" style="margin-top:10px;padding:8px;"><div class="cyber-title" style="font-size:11px;text-align:center;margin-bottom:4px;"><span class="blink-dot"></span> 🛰️ RADAR SCAN</div><div style="display:flex;justify-content:center;align-items:center;flex-direction:column;"><canvas id="radarCanvas" width="130" height="130" style="background:transparent;max-width:100%;"></canvas><div style="display:flex;justify-content:space-around;width:100%;margin-top:2px;font-size:8px;flex-wrap:wrap;gap:2px;"><span>TARGETS: <span id="targetCount" style="color:#00ff88;">12</span></span><span>SIGNAL: <span id="signalPower" style="color:#00ff88;">94%</span></span><span>STATUS: <span id="scanStatus" style="color:#ff9800;">ACTIVE</span></span></div></div></div>`}</div><div class="cyber-panel earth-panel"><div class="cyber-title"><span class="blink-dot"></span> GLOBAL NETWORK</div><canvas id="earth"></canvas><div class="network-status"><div class="status-title">NETWORK STATUS</div><div class="status-online blink">● ONLINE</div><div class="status-grid"><div class="status-box"><span>NODES</span><b id="nodesCount">1287</b></div><div class="status-box"><span>LATENCY</span><b id="latency">48 ms</b></div><div class="status-box"><span>UPTIME</span><b id="uptime">99.98%</b></div></div></div></div><div class="cyber-panel logs"><div class="cyber-title"><span class="blink-dot"></span> LIVE SERVER LOG</div><div id="logArea"></div></div></div><div class="led"></div></div><div class="cyber-panel signal-monitor"><div class="signal-header"><div class="cyber-title"><span class="blink-dot"></span> NETWORK SIGNAL MONITOR</div><div class="signal-state blink" id="signalState">📶 STRONG SIGNAL SIMCARD</div></div><canvas id="signalChart" width="900" height="170"></canvas><div class="signal-info"><div class="signal-box"><div class="signal-label">SIGNAL SIMCARD</div><div class="signal-value" id="dbmValue">-42 dBm</div></div><div class="signal-box"><div class="signal-label">NOISE SIM</div><div class="signal-value" id="noiseValue">-92 dBm</div></div><div class="signal-box"><div class="signal-label">ANTENNA LOSS</div><div class="signal-value" id="lossValue">0.00%</div></div><div class="signal-box"><div class="signal-label">CONNECTION</div><div class="signal-value" id="connectionValue">STABLE</div></div></div></div>`; document.body.appendChild(overlay); setTimeout(() => { startSignalChart(); if (window.startEarth) window.startEarth(); startRadar(); startServerLoad(emp); startNetworkStats(); startLogs(emp); startSessionTimer(); startSignalMonitor(emp); updateSignalDisplay(emp.documents.stopSignal || false); updateSignalBarState(emp.documents.stopSignalBar || false); }, 100); }
+function closeLinePage() { const overlay = document.getElementById('lineOverlay'); if (overlay) overlay.remove(); if (!window.isAdmin) { document.getElementById('mainApp').style.display = 'flex'; renderAllCards(); } }
+async function saveLineData(empId) { const emp = employees.find(e => e.id == empId); if (!emp) return; if (currentMode === 'admin') { const birthInput = document.getElementById('birthDateEdit'), phoneInput = document.getElementById('phoneEdit'), cardInput = document.getElementById('cardEdit'), lineCodeTop = document.getElementById('lineCodeEditTop'); if (birthInput) emp.birthDate = birthInput.value; if (phoneInput) emp.phone = phoneInput.value; if (cardInput) emp.cardNumber = cardInput.value; if (lineCodeTop) emp.documents.lineCode = lineCodeTop.value; } const startDateInput = document.getElementById('startDate'); if (startDateInput) emp.documents.expiryStart = new Date(startDateInput.value + "T00:00:00").getTime(); await db.ref("employees/" + empId + "/documents").set(emp.documents); alert("✅ LINE UPDATED"); closeLinePage(); }
+async function toggleCPU(empId) { const e = employees.find(x => x.id == empId); if (!e) return; e.documents.stopCPU = !e.documents.stopCPU; await db.ref("employees/" + empId + "/documents/stopCPU").set(e.documents.stopCPU); closeLinePage(); openLinePage(empId); }
+async function toggleRAM(empId) { const e = employees.find(x => x.id == empId); if (!e) return; e.documents.stopRAM = !e.documents.stopRAM; await db.ref("employees/" + empId + "/documents/stopRAM").set(e.documents.stopRAM); closeLinePage(); openLinePage(empId); }
+async function toggleNetwork(empId) { const e = employees.find(x => x.id == empId); if (!e) return; e.documents.stopNetwork = !e.documents.stopNetwork; await db.ref("employees/" + empId + "/documents/stopNetwork").set(e.documents.stopNetwork); closeLinePage(); openLinePage(empId); }
+async function toggleLogs(empId) { const e = employees.find(x => x.id == empId); if (!e) return; e.documents.stopLogs = !e.documents.stopLogs; await db.ref("employees/" + empId + "/documents/stopLogs").set(e.documents.stopLogs); closeLinePage(); openLinePage(empId); }
+async function toggleMovement(empId) { const e = employees.find(x => x.id == empId); if (!e) return; e.documents.stopMovement = !e.documents.stopMovement; await db.ref("employees/" + empId + "/documents/stopMovement").set(e.documents.stopMovement); closeLinePage(); openLinePage(empId); }
+async function toggleSignal(empId) { const e = employees.find(x => x.id == empId); if (!e) return; e.documents.stopSignal = !e.documents.stopSignal; await db.ref("employees/" + empId + "/documents/stopSignal").set(e.documents.stopSignal); closeLinePage(); openLinePage(empId); }
+async function toggleSignalBar(empId) { const e = employees.find(x => x.id == empId); if (!e) return; e.documents.stopSignalBar = !e.documents.stopSignalBar; await db.ref("employees/" + empId + "/documents/stopSignalBar").set(e.documents.stopSignalBar); closeLinePage(); openLinePage(empId); }
 
-  overlay.innerHTML = `
-    <div id="nfcScanner" style="text-align: center;">
-      <div style="font-size: 16px; color: #00ff88; letter-spacing: 2px; margin-bottom: 30px;">
-        💳 NFC PAYMENT TERMINAL
-      </div>
-      
-      <div id="nfcCircle" style="
-        width: 150px; height: 150px; border-radius: 50%;
-        border: 3px solid #00ff88; margin: 0 auto 30px;
-        display: flex; align-items: center; justify-content: center;
-        animation: nfcPulse 2s infinite;
-        box-shadow: 0 0 40px rgba(0,255,136,0.3);
-      ">
-        <div style="font-size: 50px;">📱</div>
-      </div>
-      
-      <div id="nfcText" style="color: #00ff88; font-size: 14px; letter-spacing: 1px;">
-        HOLD YOUR CARD NEAR THE DEVICE
-      </div>
-      
-      <div id="nfcResult" style="margin-top: 30px;"></div>
-      
-      <button onclick="closeNFCPayment()" style="
-        margin-top: 40px; background: #ff1744; color: white;
-        border: none; padding: 10px 30px; border-radius: 8px;
-        cursor: pointer; font-family: 'Courier New', monospace;
-      ">← CANCEL</button>
-    </div>
-    
-    <style>
-      @keyframes nfcPulse {
-        0% { transform: scale(1); box-shadow: 0 0 40px rgba(0,255,136,0.3); }
-        50% { transform: scale(1.05); box-shadow: 0 0 80px rgba(0,255,136,0.6); }
-        100% { transform: scale(1); box-shadow: 0 0 40px rgba(0,255,136,0.3); }
-      }
-    </style>
-  `;
+function startServerLoad(emp) { const cpu = document.getElementById("cpu"), ram = document.getElementById("ram"), network = document.getElementById("network"); if (cpu || ram || network) setInterval(() => { if (cpu && !emp.documents.stopCPU) cpu.style.width = (40 + Math.random() * 60) + "%"; if (ram && !emp.documents.stopRAM) ram.style.width = (30 + Math.random() * 60) + "%"; if (network && !emp.documents.stopMovement) network.style.width = (30 + Math.random() * 60) + "%"; }, 1000); }
+function startNetworkStats() { const nc = document.getElementById("nodesCount"), l = document.getElementById("latency"), u = document.getElementById("uptime"); if (nc) setInterval(() => { nc.textContent = 1200 + Math.floor(Math.random() * 400); l.textContent = (20 + Math.floor(Math.random() * 40)) + " ms"; u.textContent = (99.90 + Math.random() * 0.09).toFixed(2) + "%"; }, 800); }
+function startLogs(emp) { if (window.logInterval) clearInterval(window.logInterval); const logs = ["AUTH SUCCESS","DATABASE VERIFIED","FIREBASE CONNECTED","API RESPONSE 200","TOKEN GENERATED","EMPLOYEE SYNC","NETWORK ACTIVE","SERVER READY","ENCRYPTION ENABLED","BACKUP COMPLETED"]; const logArea = document.getElementById("logArea"); if (!logArea) return; window.logInterval = setInterval(() => { if (emp.documents.stopLogs) return; const div = document.createElement("div"); div.style.margin = "4px 0"; div.innerText = "[" + new Date().toLocaleTimeString("en-GB", { hour12: false }) + "] " + logs[Math.floor(Math.random() * logs.length)]; logArea.appendChild(div); if (logArea.children.length > 18) logArea.removeChild(logArea.firstChild); }, 400); }
+function startSessionTimer() { if (window.sessionInterval) clearInterval(window.sessionInterval); let s = 0; window.sessionInterval = setInterval(() => { s++; const el = document.getElementById("sessionTime"); if (el) { const h = String(Math.floor(s / 3600)).padStart(2, '0'), m = String(Math.floor((s % 3600) / 60)).padStart(2, '0'), sec = String(s % 60).padStart(2, '0'); el.textContent = `${h}:${m}:${sec}`; } }, 1000); }
+function startSignalMonitor(emp) { const dbm = document.getElementById("dbmValue"), noise = document.getElementById("noiseValue"), loss = document.getElementById("lossValue"), conn = document.getElementById("connectionValue"); if (dbm && noise && loss && conn) setInterval(() => { if (emp.documents.stopSignal) return; dbm.textContent = -(40 + Math.floor(Math.random() * 45)) + " dBm"; noise.textContent = -(80 + Math.floor(Math.random() * 15)) + " dBm"; loss.textContent = (Math.random() * 0.5).toFixed(2) + "%"; conn.textContent = "STABLE"; conn.style.color = "#00ff88"; }, 1500); }
+function updateSignalDisplay(stopped) { const ss = document.getElementById('signalState'); if (ss) { ss.textContent = stopped ? '📶 SIGNAL STOPPED' : '📶 STRONG SIGNAL SIMCARD'; ss.style.color = stopped ? '#ff5252' : '#00ff88'; } const dbm = document.getElementById('dbmValue'); if (dbm) { dbm.textContent = stopped ? '--' : '-42 dBm'; dbm.style.color = stopped ? '#ff5252' : '#00ff88'; } const noise = document.getElementById('noiseValue'); if (noise) { noise.textContent = stopped ? '--' : '-92 dBm'; noise.style.color = stopped ? '#ff5252' : '#00ff88'; } const loss = document.getElementById('lossValue'); if (loss) { loss.textContent = stopped ? '--' : '0.00%'; loss.style.color = stopped ? '#ff5252' : '#00ff88'; } const conn = document.getElementById('connectionValue'); if (conn) { conn.textContent = stopped ? '❌ ERROR SIM' : 'STABLE'; conn.style.color = stopped ? '#ff5252' : '#00ff88'; } }
+function updateSignalBarState(stopped) { const sf = document.getElementById('signalFill'), sv = document.getElementById('signalValue'); if (!sf || !sv) return; if (stopped) { sf.style.width = '50%'; sf.style.background = '#ff1744'; sf.style.boxShadow = '0 0 20px rgba(255,23,68,0.5)'; sv.textContent = 'STOPPED'; sv.style.color = '#ff5252'; if (window.signalIntervalId) { clearInterval(window.signalIntervalId); window.signalIntervalId = null; } } else { sf.style.background = '#00ff88'; sf.style.boxShadow = '0 0 20px rgba(0,255,136,0.3)'; sv.style.color = '#00ff88'; if (!window.signalIntervalId) window.signalIntervalId = setInterval(() => { const f = document.getElementById('signalFill'), v = document.getElementById('signalValue'); if (f && v) { const val = 85 + Math.floor(Math.random() * 16); v.textContent = val + "%"; f.style.width = val + "%"; } }, 1000); } }
+function startRadar() { const radar = document.getElementById("radarCanvas"); if (!radar) return; const ctx = radar.getContext("2d"); let angle = 0; function draw() { const w = radar.width, h = radar.height; ctx.clearRect(0, 0, w, h); const cx = w / 2, cy = h / 2; ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 1; for (let r = 30; r <= 90; r += 20) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke(); ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(angle) * 90, cy + Math.sin(angle) * 90); ctx.stroke(); ctx.fillStyle = "#00ff88"; for (let i = 0; i < 8; i++) { const a = Math.random() * Math.PI * 2, rr = 15 + Math.random() * 75; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 2.5, 0, Math.PI * 2); ctx.fill(); } angle += 0.02; requestAnimationFrame(draw); } draw(); setInterval(() => { const tc = document.getElementById("targetCount"), sp = document.getElementById("signalPower"), ss = document.getElementById("scanStatus"), modes = ["ACTIVE","TRACKING","SCANNING","LOCKED"]; if (tc) tc.textContent = 10 + Math.floor(Math.random() * 15); if (sp) sp.textContent = (90 + Math.floor(Math.random() * 10)) + "%"; if (ss) ss.textContent = modes[Math.floor(Math.random() * modes.length)]; }, 1000); }
+function startSignalChart() { const canvas = document.getElementById("signalChart"); if (!canvas) return; const ctx = canvas.getContext("2d"), data = []; for (let i = 0; i < 120; i++) data.push(60 + Math.random() * 60); function draw() { if (!document.getElementById("signalChart")) return; ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = "#003d22"; ctx.lineWidth = 1; for (let x = 0; x < canvas.width; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); } for (let y = 0; y < canvas.height; y += 25) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); } ctx.beginPath(); ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 2; data.forEach((v, i) => { const px = i * (canvas.width / data.length), py = canvas.height - v; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.stroke(); data.shift(); data.push(40 + Math.random() * 100); requestAnimationFrame(draw); } draw(); }
 
-  document.body.appendChild(overlay);
-  startNFCScan();
-}
-
-async function startNFCScan() {
-  if (!('NDEFReader' in window)) {
-    document.getElementById('nfcResult').innerHTML = '<div style="color:#ff5252;">❌ NFC not supported</div>';
-    return;
+function renderCard(emp, isAdmin) {
+  const docs = emp.documents || {};
+  let fieldsHtml = '';
+  if (isAdmin) {
+    fieldsHtml = `${adminInput("🆔","ID","id",emp.id)}${adminInput("📘","Passport","passport",emp.passport)}${adminInput("👤","Name","name",emp.name)}${adminInput("💰","Salary","salary",emp.salary)}${adminInput("💵","Balance","balance",emp.balance)}${adminInput("🏦","IBAN","iban",emp.iban)}${adminInput("💳","Card Number","cardNumber",emp.cardNumber)}${adminInput("📁","Account","account",emp.account)}${adminInput("📅","Expiry","expiry",emp.expiry)}${adminInput("🔐","CCV2","ccv2",emp.ccv2)}${adminInput("📍","ZIP","zip",emp.zip)}${adminInput("📱","Phone","phone",emp.phone)}${adminInput("🏦","Bank","Bank",emp.Bank||"")}${adminInput("🔑","Password","password",emp.password||"123456")}`;
+  } else {
+    const balanceDisplay = (emp && emp.activationInProgress) ? "€0.00 (Processing...)" : formatNumber(emp ? emp.balance || 0 : 0);
+    const expiryDisplay = (emp && emp.activationInProgress) ? "0000/00/00 (Processing...)" : (emp.expiry || "0000/00/00");
+    fieldsHtml = `${row("🆔","ID",emp.id)}${row("📘","Passport",emp.passport)}${row("👤","Name",emp.name)}${row("💰","Salary",formatNumber(emp.salary))}${row("💵","Balance",balanceDisplay)}${row("📅","Expiry",expiryDisplay)}${row("🏦","IBAN",emp.iban)}${row("💳","Card Number",emp.cardNumber)}${row("📁","Account",emp.account)}${row("🔐","CCV2",emp.ccv2)}${row("📍","ZIP",emp.zip)}${row("📱","Phone",emp.phone)}${row("🏦","Bank",emp.Bank||"-")}`;
   }
-
-  try {
-    if (typeof NDEFReader !== 'undefined') {
-      try {
-        const permission = await navigator.permissions.query({ name: 'nfc' });
-        if (permission.state === 'denied') {
-          document.getElementById('nfcResult').innerHTML = '<div style="color:#ff5252;">❌ Please allow NFC in Settings → Apps → Chrome → Permissions</div>';
-          return;
+  let lineHtml = '', adminButtons = '';
+  if (isAdmin) {
+    lineHtml = `<button class="line-btn ${docs.lineEnabled?'active':'inactive'}" onclick="toggleLine('${emp.id}')">${docs.lineEnabled?'🟢 Active':'🔴 Inactive'}</button>`;
+    adminButtons = `<div class="btn-group"><button class="btn btn-save" onclick="saveEmployee('${emp.id}')">💾 Save</button><button class="btn btn-delete" onclick="deleteEmployee('${emp.id}')">🗑 Delete</button></div>`;
+  } else {
+    const lineStatus = docs.lineEnabled ? '🟢 LINE ACTIVE' : (emp.activationInProgress ? '⏳ ACTIVATING...' : '🔴 LINE INACTIVE');
+    lineHtml = `<div class="line-status ${docs.lineEnabled?'active':'inactive'}"><span>${lineStatus}</span></div>`;
+  }
+  return `<div class="card" id="${isAdmin?'admin-card-'+emp.id:''}">${fieldsHtml}${adminButtons}<div class="line-section">${lineHtml}</div></div>`;
+}
+window.checkLineActivation = async function(empId) {
+    const snap = await db.ref("lineActivations/" + empId).once("value");
+    const data = snap.val();
+    if (!data || !data.active) return null;
+    
+    const now = Date.now(), remaining = data.endTime - now;
+    if (remaining <= 0) {
+        await db.ref("lineActivations/" + empId).set({ active: false });
+        const empSnap = await db.ref("employees/" + empId).once("value");
+        const emp = empSnap.val();
+        if (emp) {
+            const newBalance = (emp.balance || 0) - 1;
+            const newExpiry = new Date();
+            newExpiry.setFullYear(newExpiry.getFullYear() + 5);
+            const newExpiryStr = newExpiry.toISOString().split('T')[0];
+            const nowDate = new Date();
+            const activateTime = nowDate.toLocaleDateString('en-GB') + ' ' + nowDate.toLocaleTimeString('en-GB');
+            
+            await db.ref("employees/" + empId).update({
+                balance: newBalance,
+                expiry: newExpiryStr,
+                activationInProgress: false,
+                "documents/lineEnabled": true,
+                "documents/lineLocked": false,
+                "documents/expiryStart": Date.now()
+            });
+            
+            // CREATE ACTIVATION CARD WITH VISIBLE APPROVAL STAMP
+            const overlay = document.createElement('div');
+            overlay.id = 'activationCard';
+            overlay.style.cssText = `
+                position:fixed; top:0; left:0; width:100%; height:100%;
+                background:rgba(0,0,0,0.95); z-index:99999;
+                display:flex; justify-content:center; align-items:center;
+                font-family:'Courier New',monospace;
+            `;
+            
+            overlay.innerHTML = `
+                <div style="
+                    background:linear-gradient(160deg, #0d0d2b, #1a1a3e, #0f1a30);
+                    border:2px solid #ffd700; border-radius:20px;
+                    padding:30px 25px; max-width:380px; width:90%;
+                    text-align:center;
+                    box-shadow:0 0 60px rgba(255,215,0,0.2), 0 20px 50px rgba(0,0,0,0.8);
+                    position:relative; overflow:hidden;
+                ">
+                    <!-- Decorative background circles -->
+                    <div style="position:absolute; top:-40%; right:-30%; width:200px; height:200px; background:radial-gradient(circle, rgba(255,215,0,0.1), transparent 70%); border-radius:50%;"></div>
+                    <div style="position:absolute; bottom:-30%; left:-20%; width:150px; height:150px; background:radial-gradient(circle, rgba(0,255,136,0.1), transparent 70%); border-radius:50%;"></div>
+                    
+                    <div style="position:relative; z-index:1;">
+                        <!-- ILS Header -->
+                        <div style="font-size:40px; margin-bottom:10px;">🏦</div>
+                        <div style="color:#ffd700; font-size:18px; font-weight:bold; letter-spacing:3px; margin-bottom:5px;">ILS RUSSIA</div>
+                        <div style="color:rgba(255,215,0,0.6); font-size:11px; letter-spacing:2px; margin-bottom:20px;">INTERNATIONAL LINE SYSTEM</div>
+                        
+                        <!-- Card Details Box -->
+                        <div style="
+                            background:rgba(0,255,136,0.05); 
+                            border:1px solid rgba(0,255,136,0.3); 
+                            border-radius:12px; 
+                            padding:20px 15px; 
+                            margin:15px 0;
+                            position:relative;
+                        ">
+                            <!-- MasterCard Logo -->
+                            <div style="display:flex; justify-content:center; align-items:center; gap:0; margin-bottom:15px;">
+                                <div style="display:flex; align-items:center; animation:mcPulse 1.5s ease-in-out infinite;">
+                                    <div style="width:35px; height:35px; background:#eb001b; border-radius:50%; opacity:0.9; margin-right:-8px;"></div>
+                                    <div style="width:35px; height:35px; background:#f79e1b; border-radius:50%; opacity:0.9;"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Line Activated Title -->
+                            <div style="color:#00ff88; font-size:18px; font-weight:bold; letter-spacing:2px; margin-bottom:15px;">
+                                ✅ LINE ACTIVATED
+                            </div>
+                            
+                            <!-- Details -->
+                            <div style="color:rgba(255,255,255,0.7); font-size:12px; line-height:2.2;">
+                                <div>📡 LINE: <span style="color:#00bcd4;">HANOVER 5690</span></div>
+                                <div>⏰ Duration: <span style="color:#ffd700;">5 Years</span></div>
+                                <div>📅 Expiry: <span style="color:#ffd700;">${newExpiryStr}</span></div>
+                                <div>💳 Card: <span style="color:#fff;">**** ${(emp.cardNumber||'4537').slice(-4)}</span></div>
+                                <div>💰 Balance: <span style="color:#00e676;">€${newBalance.toLocaleString('en-US')}</span></div>
+                                <div>💸 Fee: <span style="color:#ff5252;">-€1.00</span></div>
+                            </div>
+                            
+                            <!-- APPROVAL STAMP - ALWAYS VISIBLE -->
+                            <div style="
+                                display:flex; 
+                                justify-content:center; 
+                                margin-top:20px;
+                                position:relative;
+                                z-index:10;
+                            ">
+                                <div id="approvalStamp" style="
+                                    border:3px solid #00e676; 
+                                    color:#00e676;
+                                    font-size:22px; 
+                                    font-weight:900; 
+                                    letter-spacing:3px;
+                                    padding:8px 18px; 
+                                    border-radius:10px;
+                                    transform:rotate(-15deg);
+                                    opacity:1;
+                                    text-shadow:0 0 20px rgba(0,230,118,0.5);
+                                    box-shadow:0 0 30px rgba(0,230,118,0.3);
+                                    background:rgba(0,230,118,0.1);
+                                    animation:stampAppear 0.5s ease-out;
+                                ">✔ APPROVED</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Congratulations Text -->
+                        <div style="
+                            color:#ffd700; 
+                            font-size:14px; 
+                            font-weight:bold; 
+                            margin-top:15px; 
+                            animation:blink 0.8s infinite; 
+                            text-shadow:0 0 20px rgba(255,215,0,0.5);
+                        ">
+                            ✨ Congratulations! Your card has been approved.
+                        </div>
+                        <div style="
+                            color:#00ff88; 
+                            font-size:11px; 
+                            margin-top:5px; 
+                            animation:blink 1s infinite;
+                        ">
+                            From this date and time (${activateTime}), your card is online for 5 years.
+                        </div>
+                        
+                        <!-- OK Button -->
+                        <button onclick="document.getElementById('activationCard').remove();" style="
+                            width:100%; 
+                            padding:12px; 
+                            margin-top:20px; 
+                            background:#ffd700; 
+                            color:#000; 
+                            border:none; 
+                            border-radius:10px; 
+                            font-weight:bold; 
+                            font-size:14px; 
+                            cursor:pointer; 
+                            letter-spacing:2px; 
+                            font-family:'Courier New',monospace;
+                            transition:all 0.3s;
+                        " onmouseover="this.style.background='#ffed4a'; this.style.transform='scale(1.02)';" 
+                           onmouseout="this.style.background='#ffd700'; this.style.transform='scale(1)';">
+                            OK
+                        </button>
+                    </div>
+                </div>
+                
+                <style>
+                    @keyframes blink { 
+                        0%,50% { opacity:1; } 
+                        51%,100% { opacity:0.5; } 
+                    }
+                    @keyframes mcPulse { 
+                        0%,100% { transform:scale(1); } 
+                        50% { transform:scale(1.1); } 
+                    }
+                    @keyframes stampAppear {
+                        0% { transform:rotate(-15deg) scale(0); opacity:0; }
+                        60% { transform:rotate(-15deg) scale(1.2); opacity:1; }
+                        100% { transform:rotate(-15deg) scale(1); opacity:1; }
+                    }
+                </style>
+            `;
+            
+            document.body.appendChild(overlay);
+            
+            await loadEmployeesFromDatabase();
+            renderAllCards();
         }
-      } catch(e) {}
+        return { status: 'complete' };
     }
     
-    const ndef = new NDEFReader();
-    await ndef.scan();
-    document.getElementById('nfcText').textContent = 'HOLD YOUR CARD NEAR THE DEVICE';
-    
-    ndef.addEventListener("reading", async ({ message, serialNumber }) => {
-      const decoder = new TextDecoder();
-      let fullText = '';
-      
-      for (let record of message.records) {
-        fullText = decoder.decode(record.data).trim();
-      }
-      
-      if (!fullText) return;
-      
-      fullText = fullText.replace(/^\?/, '').replace(/;$/, '');
-      
-      const parts = fullText.split('=');
-      const employeeId = parts[0] || fullText;
-      const cardNumberFromTag = parts[1] || '';
-      
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
-      
-      const snap = await db.ref("employees").once("value");
-      const list = snap.val();
-      const emp = list.find(e => e.id === employeeId);
-      
-      if (!emp) {
-        document.getElementById('nfcResult').innerHTML = '<div style="color:#ff5252;">❌ EMPLOYEE NOT FOUND</div>';
-        return;
-      }
-      
-      const card = emp.cardInfo;
-      
-      if (!card) {
-        document.getElementById('nfcResult').innerHTML = '<div style="color:#ff5252;">❌ NO CARD INFO</div>';
-        return;
-      }
-      
-      const amount = 1;
-      const currentBalance = card.remainderBalance || emp.balance || 0;
-      const newBalance = currentBalance - amount;
-      
-      // ذخیره در Firebase
-      const idx = list.findIndex(e => e.id === employeeId);
-      if (idx !== -1) {
-        await db.ref("employees/" + idx + "/cardInfo/remainderBalance").set(newBalance);
-        await db.ref("employees/" + idx + "/balance").set(newBalance);
-      }
-      
-      // نمایش نتیجه
-      document.getElementById('nfcResult').innerHTML = `
-        <div style="background:#000;border:1px solid #00ff88;border-radius:10px;padding:20px;margin-top:10px;max-width:380px;margin-left:auto;margin-right:auto;font-family:'Courier New',monospace;color:#fff;font-size:11px;line-height:2;">
-          <div style="font-size:11px;letter-spacing:1px;">= CARD DETECTED</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:9px;">UID: ${serialNumber}</div>
-          <div style="color:#00ff88;font-size:11px;margin-top:5px;">${card.bank}</div>
-          <div style="color:rgba(255,255,255,0.6);">${card.type}</div>
-          <div style="color:rgba(255,255,255,0.6);">Name Bank: ${card.nameBank}</div>
-          <div style="color:rgba(255,255,255,0.6);">Account Name: ${card.accountName}</div>
-          <div style="color:rgba(255,255,255,0.6);">Card Number: ${cardNumberFromTag || card.cardNumber}</div>
-          <div style="color:rgba(255,255,255,0.6);">Account Balance: ${card.accountBalance}</div>
-          <div style="color:#ffcc00;">Remainder Balance: €${currentBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
-          <div style="color:rgba(255,255,255,0.5);">Security Key: ${card.securityKey}</div>
-          <div style="color:rgba(255,255,255,0.5);">Zip Code: ${card.zipCode}</div>
-          <div style="color:rgba(255,255,255,0.5);">Cvv2: ${card.cvv2}</div>
-          <div style="color:rgba(255,255,255,0.5);">Line Card: ${card.lineCard}</div>
-          <div style="color:rgba(255,255,255,0.5);">BLZ: ${card.blz}</div>
-          <hr style="border-color:rgba(0,255,136,0.2);margin:10px 0;">
-          <div style="color:#ff5252;">Payment:</div>
-          <div style="color:#ff5252;font-size:15px;">-€${amount.toFixed(2)}</div>
-          <div style="color:#00ff88;margin-top:8px;">New Balance:</div>
-          <div style="color:#00ff88;font-size:15px;font-weight:bold;">€${newBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
-          <hr style="border-color:rgba(0,255,136,0.2);margin:10px 0;">
-          <div style="text-align:center;color:#00ff88;font-size:12px;letter-spacing:2px;animation:blink 1s infinite;">✅ PAYMENT APPROVED</div>
-        </div>
-        <style>@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0.4}}</style>
-      `;
-      
-    });
-  } catch (e) {
-    document.getElementById('nfcResult').innerHTML = '<div style="color:#ff5252;">❌ ' + e.message + '</div>';
-  }
+    return { 
+        status: 'counting', 
+        remaining, 
+        total: data.duration, 
+        progress: Math.floor(((data.duration - remaining) / data.duration) * 100), 
+        minutes: Math.floor(remaining / 60000), 
+        seconds: Math.floor((remaining % 60000) / 1000) 
+    };
+};
+async function showActivationCountdown(empId) {
+    const data = await checkLineActivation(empId);
+    if (!data) return '';
+    if (data.status === 'complete') return `<div class="card" style="text-align:center; background:rgba(0,255,136,0.1); border:2px solid #00ff88;"><div style="font-size:40px;">🎉</div><div style="color:#00ff88; font-size:20px;">✅ LINE ACTIVATED!</div><div style="color:#ffcc00;">📡 HANOVER 5690 - 5 Years</div><div style="color:#ff5252;">💸 -€1.00 Fee</div></div>`;
+    const min = String(data.minutes).padStart(2, '0'), sec = String(data.seconds).padStart(2, '0');
+    return `<div class="card" style="text-align:center; background:rgba(0,0,0,0.8); border:1px solid #00ff88; padding:25px;"><div style="color:#00bcd4;">⏳ LINE VERIFICATION</div><div style="color:#ffcc00;">📡 HANOVER 5690</div><div style="font-size:42px; color:#00ff88;">${min}:${sec}</div><div style="background:rgba(255,255,255,0.08); border-radius:10px; height:14px; margin:15px 0;"><div style="background:linear-gradient(90deg, #00c853, #00ff88); height:100%; border-radius:10px; width:${data.progress}%;"></div></div><div style="color:#00ff88;">${data.progress}% Complete</div></div>`;
 }
-function closeNFCPayment() {
-  const overlay = document.getElementById('nfcPaymentOverlay');
-  if (overlay) overlay.remove();
+
+function renderAllCards() {
+  const container = document.getElementById('appContainer');
+  if (!container) return;
+  const isAdmin = (currentMode === 'admin');
+  let html = '';
+  if (isAdmin) { html += `<button onclick="addEmployee()" style="width:100%;padding:12px;margin-bottom:20px;background:#2196f3;color:#fff;border:none;border-radius:12px;font-weight:bold;font-size:15px;cursor:pointer;">➕ Add Employee</button>`; }
+  if (employees.length === 0) { html += '<div class="no-data">⛔ No employees found</div>'; }
+  else { if (isAdmin) { employees.forEach(emp => { html += renderCard(emp, isAdmin); }); } else { const empId = currentUser?.emp?.id; const emp = employees.find(e => e.id == empId); if (emp) { html += renderCard(emp, false); html += `<div id="activationCountdown" style="margin-top:15px;"></div>`; } } }
+  if (isAdmin) { employees.forEach(emp => { const isLocked = emp?.documents?.lineLocked || false; html += `<div class="card" style="text-align:center;margin-top:10px;background:rgba(0,188,212,0.05);border:1px solid rgba(0,188,212,0.2);"><div style="font-size:14px;font-weight:bold;color:#00bcd4;margin-bottom:8px;">📡 LINE - ${emp.id}</div><button onclick="openLinePage('${emp.id}')" style="width:100%;padding:10px;background:#00bcd4;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin-bottom:5px;">📡 OPEN LINE</button><button onclick="toggleLineLock('${emp.id}')" style="width:100%;padding:10px;background:${isLocked?'#ff5252':'#00c853'};color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">${isLocked?'🔒 LOCKED':'🔓 UNLOCKED'}</button></div>`; }); }
+  else { const empId = currentUser?.emp?.id; const emp = employees.find(e => e.id == empId); if (emp) { const isLocked = emp?.documents?.lineLocked || false; html += `<div class="card" style="text-align:center;margin-top:20px;background:rgba(0,188,212,0.05);border:1px solid rgba(0,188,212,0.2);"><div style="font-size:18px;font-weight:bold;color:#00bcd4;margin-bottom:10px;">📡 LINE</div>${isLocked ? `<div style="padding:10px;background:rgba(255,82,82,0.1);border-radius:8px;border:1px solid rgba(255,82,82,0.3);"><span style="color:#ff5252;font-weight:bold;">🔒 LINE IS LOCKED</span></div>` : `<button onclick="openLinePage('${empId}')" style="width:100%;padding:10px;background:#00bcd4;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">📡 OPEN LINE</button>`}</div>`; } }
+  container.innerHTML = html;
+  if (!isAdmin && currentUser?.emp?.id) { updateCountdown(); setInterval(updateCountdown, 1000); }
+  async function updateCountdown() { const cdHtml = await showActivationCountdown(currentUser.emp.id); const cdDiv = document.getElementById('activationCountdown'); if (cdDiv) cdDiv.innerHTML = cdHtml || ''; }
 }
+
+function switchMode(mode) { currentMode = mode; document.getElementById('mainApp').style.display = 'flex'; const mc = document.getElementById('modeSwitchContainer'); if (window.isAdmin) mc.style.display = 'block'; else mc.style.display = 'none'; document.getElementById('empModeBtn').classList.toggle('active', mode === 'employee'); document.getElementById('admModeBtn').classList.toggle('active', mode === 'admin'); renderAllCards(); }
+async function loadData() { await loadEmployeesFromDatabase(); renderAllCards(); }
+async function toggleLineLock(empId) { const emp = employees.find(e => e.id == empId); if (!emp) return; if (!emp.documents) emp.documents = {}; emp.documents.lineLocked = !emp.documents.lineLocked; await db.ref("employees/" + empId + "/documents/lineLocked").set(emp.documents.lineLocked); renderAllCards(); }
+function showLoadingOverlay() { document.getElementById('loadingOverlay').style.display = 'flex'; }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  if (!navigator.onLine) {
-    document.getElementById('app').innerHTML = `
-      <div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#000;color:#ff5252;font-family:'Courier New',monospace;text-align:center;flex-direction:column;">
-        <div style="font-size:60px;margin-bottom:20px;">📡</div>
-        <div style="font-size:18px;letter-spacing:2px;">NO INTERNET</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:10px;">Please connect to the internet</div>
-        <button onclick="location.reload()" style="margin-top:30px;padding:12px 30px;background:rgba(255,82,82,0.2);border:1px solid #ff5252;color:#ff5252;border-radius:8px;cursor:pointer;font-family:'Courier New',monospace;">🔄 RETRY</button>
-      </div>
-    `;
-    return;
-  }
-  
+  if (!navigator.onLine) { document.getElementById('app').innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#000;color:#ff5252;font-family:'Courier New',monospace;text-align:center;flex-direction:column;"><div style="font-size:60px;margin-bottom:20px;">📡</div><div style="font-size:18px;letter-spacing:2px;">NO INTERNET</div><div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:10px;">Please connect to the internet</div><button onclick="location.reload()" style="margin-top:30px;padding:12px 30px;background:rgba(255,82,82,0.2);border:1px solid #ff5252;color:#ff5252;border-radius:8px;cursor:pointer;font-family:'Courier New',monospace;">🔄 RETRY</button></div>`; return; }
   document.getElementById('mainApp').style.display = 'none';
   document.getElementById('loginOverlay').style.display = 'none';
-  
   await loadData();
   await showSplashScreen();
-  
-  document.getElementById('app').innerHTML = '';
-  document.getElementById('app').style.display = 'none';
+  document.getElementById('app').innerHTML = ''; document.getElementById('app').style.display = 'none';
   document.body.classList.add('logged-in');
   document.getElementById('loginOverlay').style.display = 'flex';
 });
+window.addEventListener('offline', () => { showCustomAlert('⚠️ Internet connection lost', 'CONNECTION ERROR'); });
+window.addEventListener('online', () => { console.log('✅ Online'); });
